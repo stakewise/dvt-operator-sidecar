@@ -1,0 +1,15 @@
+/.git
+/.idea
+/.github
+/venv
+/dist
+build
+.mypy_cache
+Dockerfile
+.dockerignore
+.gitignore
+local.env
+__pycache__/
+*.env
+/logfile
+/deploy

@@ -1,0 +1,107 @@
+[tool.poetry]
+name = "dvt-operator-sidecar"
+version = "0.1.0"
+description = "StakeWise sidecar for DVT-operator"
+authors = ["StakeWise Labs <info@stakewise.io>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+python-decouple = "==3.8"
+sentry-sdk = "==1.32.0"
+py-ecc = "==6.0.0"
+sw-utils = {git = "https://github.com/stakewise/sw-utils.git", rev = "v0.6.14"}
+tomli = "~2"
+prometheus-client = "==0.17.1"
+pyyaml = "==6.0.1"
+python-json-logger = "==2.0.7"
+staking-deposit = { git = "https://github.com/ethereum/staking-deposit-cli.git", rev = "v2.4.0" }
+
+[tool.poetry.group.dev.dependencies]
+pylint = "==3.0.1"
+mypy = "==1.6.1"
+isort = "==5.12.0"
+pytest = "==7.4.2"
+pytest-asyncio = "==0.21.1"
+pre-commit = "==3.5.0"
+Flake8-pyproject = "==1.2.3"
+bandit = { version = "==1.7.5", extras = ["toml"] }
+black = { version = "==23.10.0", extras = ["d"] }
+faker = "==19.11.0"
+flake8-print = "==5.0.0"
+flake8-datetimez = "==20.10.0"
+types-pyyaml = "==6.0.12.12"
+coverage = "==7.3.2"
+types-requests = "^2.31.0"
+types-setuptools = "^70.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.bandit]
+exclude_dirs = ["*/tests/*", "src/config/networks.py", "conftest.py"]
+skips = ["B608"]
+
+[tool.pylint."pre-commit-hook"]
+disable = [
+    "C0103",  # invalid-name
+    "C0114",  # missing-class-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "R0801",  # duplicate-code
+    "R0903",  # too-few-public-methods
+    "W0703",  # broad-except
+    "W0718"   # broad-exception-caught
+]
+ignore-paths=["src/.*/tests/.*", "src/test_fixtures/.*"]
+ignore=["conftest.py"]
+
+[tool.pylint."BASIC"]
+good-names = ["db"]
+ignored-modules=["milagro_bls_binding"]
+
+[tool.flake8]
+extend-ignore = [
+    "E203",  # Whitespace before ':', conflicts with black
+    "E501"  # line length will be checked by pylint
+]
+
+[tool.mypy]
+exclude = ["test_"]
+ignore_missing_imports = true
+python_version = "3.10"
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = 'web3.*'
+no_implicit_optional = false
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 100
+skip-string-normalization = true
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.coverage.report]
+fail_under = 73
