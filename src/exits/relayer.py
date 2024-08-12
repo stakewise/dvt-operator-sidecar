@@ -1,8 +1,7 @@
 import logging
 
 from aiohttp import ClientSession
-from eth_typing import BLSSignature, HexStr
-from web3 import Web3
+from eth_typing import HexStr
 
 from src.config import settings
 
@@ -16,17 +15,20 @@ async def get_exits(session: ClientSession) -> list[dict]:
     return jsn['exits']
 
 
-async def push_signature(
+async def push_exit_signatures(
     session: ClientSession,
-    public_key: HexStr,
-    exit_signature: BLSSignature,
+    public_key_to_exit_signature: dict[HexStr, HexStr],
+    share_index: int,
 ) -> None:
-    share_index = settings.share_index
-    jsn = {
-        'public_key': public_key,
-        'share_index': share_index,
-        'signature': Web3.to_hex(exit_signature),
-    }
+    shares = []
+    for public_key, exit_signature in public_key_to_exit_signature.items():
+        shares.append(
+            {
+                'public_key': public_key,
+                'exit_signature': exit_signature,
+            }
+        )
+    jsn = {'share_index': share_index, 'shares': shares}
     logger.info('push exit signature for share_index %s', share_index)
     res = await session.post(f'{settings.relayer_endpoint}/exit-signature', json=jsn)
     res.raise_for_status()

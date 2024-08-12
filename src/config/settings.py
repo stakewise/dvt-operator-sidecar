@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from decouple import config
+from decouple import Csv, config
 
 from src.config.networks import NETWORKS, NetworkConfig
 
@@ -20,10 +20,11 @@ sentry_environment = config('SENTRY_ENVIRONMENT', default='')
 relayer_endpoint: str = config('RELAYER_ENDPOINT')
 relayer_timeout: int = config('RELAYER_TIMEOUT', cast=int, default=10)
 
-keystores_dir = Path(config('KEYSTORES_DIR'))
+keystores_dir: str = config('KEYSTORES_DIR')
 
 cluster_lock_path = Path(config('CLUSTER_LOCK_PATH'))
 
 share_index: int = config('SHARE_INDEX', cast=int)
+share_indexes: list[int] = config('SHARE_INDEXES', cast=Csv(int), default='')
 
-poll_interval: int = config('POLL_INTERVAL', cast=int, default=1)
+poll_interval: int = config('POLL_INTERVAL', cast=int, default=2)
