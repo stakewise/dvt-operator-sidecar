@@ -67,7 +67,11 @@ async def poll_exits_and_push_signatures(
             for exit in exits:
                 public_key = exit['public_key']
 
-                pub_key_share = pub_key_to_share[public_key]
+                pub_key_share = pub_key_to_share.get(public_key)
+                if pub_key_share is None:
+                    # Another cluster owns current public key
+                    continue
+
                 exit_signature = await keystore.get_exit_signature(
                     exit['validator_index'],
                     pub_key_share,
