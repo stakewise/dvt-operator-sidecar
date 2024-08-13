@@ -87,7 +87,7 @@ class LocalKeystore:
         keystores_password_file = keystores_dir
 
         res: list[KeystoreFile] = []
-        for f in sorted(listdir(keystores_dir)):
+        for f in listdir(keystores_dir):
             if not (isfile(keystores_dir / f) and f.startswith('keystore') and f.endswith('.json')):
                 continue
 
