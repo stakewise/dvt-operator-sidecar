@@ -8,7 +8,7 @@ from src.config.settings import LOG_DATE_FORMAT, LOG_JSON
 
 
 class JsonFormatter(jsonlogger.JsonFormatter):
-    def add_fields(self, log_record, record, message_dict):
+    def add_fields(self, log_record, record, message_dict):  # type: ignore
         super().add_fields(log_record, record, message_dict)
         if not log_record.get('timestamp'):
             date = datetime.fromtimestamp(record.created, tz=timezone.utc)
@@ -19,7 +19,7 @@ class JsonFormatter(jsonlogger.JsonFormatter):
             log_record['level'] = record.levelname
 
 
-def setup_logging():
+def setup_logging() -> None:
     if settings.log_format == LOG_JSON:
         formatter = JsonFormatter('%(timestamp)s %(level)s %(name)s %(message)s')
         logHandler = logging.StreamHandler()
@@ -36,7 +36,7 @@ def setup_logging():
         )
 
 
-def setup_sentry():
+def setup_sentry() -> None:
     if settings.sentry_dsn:
         # pylint: disable-next=import-outside-toplevel
         import sentry_sdk

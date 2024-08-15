@@ -61,7 +61,7 @@ class LocalKeystore(BaseKeystore):
     def __bool__(self) -> bool:
         return len(self.keys) > 0
 
-    def __contains__(self, public_key):
+    def __contains__(self, public_key: HexStr) -> bool:
         return public_key in self.keys
 
     def __len__(self) -> int:

@@ -18,7 +18,7 @@ from src.validators.keystores.local import LocalKeystore
 logger = logging.getLogger(__name__)
 
 
-async def run_tasks():
+async def run_tasks() -> None:
     share_indexes = get_share_indexes()
 
     # Cluster lock contains public keys and public key shares
@@ -60,7 +60,7 @@ async def run_tasks():
         await asyncio.sleep(0.1)
 
 
-def get_share_indexes():
+def get_share_indexes() -> list[int]:
     return settings.share_indexes or [settings.share_index]
 
 
@@ -103,7 +103,7 @@ async def poll_exits_and_push_signatures(
             await asyncio.sleep(settings.poll_interval)
 
 
-async def poll_exits(session):
+async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
     while True:
         try:
             if exits := await relayer.get_exits(session):
