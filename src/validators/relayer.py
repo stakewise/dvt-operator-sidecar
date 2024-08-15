@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 async def get_exits(session: ClientSession) -> list[dict]:
-    res = await session.get(f'{settings.relayer_endpoint}/exits')
+    res = await session.get(f'{settings.relayer_endpoint}/validators')
     res.raise_for_status()
     jsn = await res.json()
-    return jsn['exits']
+    return jsn['validators']
 
 
 async def push_exit_signatures(

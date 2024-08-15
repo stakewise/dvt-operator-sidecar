@@ -9,10 +9,11 @@ import milagro_bls_binding as bls
 from eth_typing import BLSSignature, HexStr
 from staking_deposit.key_handling.keystore import ScryptKeystore
 from sw_utils import ConsensusFork, get_exit_message_signing_root
-from sw_utils.typings import Bytes32
 from web3 import Web3
 
-from src.exits.keystores.typings import BLSPrivkey
+from src.config import settings
+from src.validators.keystores.base import BaseKeystore
+from src.validators.keystores.typings import BLSPrivkey
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,20 @@ class KeystoreFile:
 Keys = NewType('Keys', dict[HexStr, BLSPrivkey])
 
 
-class LocalKeystore:
+class LocalKeystore(BaseKeystore):
     keys: Keys
 
     def __init__(self, keys: Keys):
         self.keys = keys
 
     @staticmethod
-    async def load(keystores_dir: Path) -> 'LocalKeystore':
+    async def load() -> 'LocalKeystore':
+        if not settings.keystores_dir:
+            raise RuntimeError('KEYSTORES_DIR must be set')
+        return await LocalKeystore.load_from_dir(Path(settings.keystores_dir))
+
+    @staticmethod
+    async def load_from_dir(keystores_dir: Path) -> 'LocalKeystore':
         """Extracts private keys from the keys."""
         keystore_files = LocalKeystore.list_keystore_files(keystores_dir)
         logger.info('Loading keys from %s...', keystores_dir)
@@ -61,13 +68,11 @@ class LocalKeystore:
         return len(self.keys)
 
     async def get_exit_signature(
-        self,
-        validator_index: int,
-        public_key: HexStr,
-        fork: ConsensusFork,
-        genesis_validators_root: Bytes32,
+        self, validator_index: int, public_key: HexStr, fork: ConsensusFork | None = None
     ) -> BLSSignature:
         private_key = self.keys[public_key]
+        fork = fork or settings.network_config.SHAPELLA_FORK
+        genesis_validators_root = settings.network_config.GENESIS_VALIDATORS_ROOT
 
         message = get_exit_message_signing_root(
             validator_index=validator_index,

@@ -20,7 +20,11 @@ sentry_environment = config('SENTRY_ENVIRONMENT', default='')
 relayer_endpoint: str = config('RELAYER_ENDPOINT')
 relayer_timeout: int = config('RELAYER_TIMEOUT', cast=int, default=10)
 
-keystores_dir_template: str = config('KEYSTORES_DIR_TEMPLATE')
+keystores_dir: str = config('KEYSTORES_DIR', default='')
+keystores_dir_template: str = config('KEYSTORES_DIR_TEMPLATE', default='')
+
+if not keystores_dir and not keystores_dir_template:
+    raise RuntimeError('KEYSTORES_DIR or KEYSTORES_DIR_TEMPLATE must be set')
 
 obol_cluster_lock_path = Path(config('OBOL_CLUSTER_LOCK_PATH'))
 
@@ -28,3 +32,6 @@ share_index: int = config('SHARE_INDEX', cast=int)
 share_indexes: list[int] = config('SHARE_INDEXES', cast=Csv(int), default='')
 
 poll_interval: int = config('POLL_INTERVAL', cast=int, default=2)
+
+remote_signer_url: str = config('remote_signer_url', default='')
+remote_signer_timeout: int = config('REMOTE_SIGNER_TIMEOUT', cast=int, default=10)

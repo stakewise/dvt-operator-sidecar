@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
+from typing import cast
 
 import aiohttp
 from aiohttp import ClientError, ClientTimeout
@@ -9,8 +10,10 @@ from eth_typing import HexStr
 from web3 import Web3
 
 from src.config import settings
-from src.exits import relayer
-from src.exits.keystores.local import LocalKeystore
+from src.validators import relayer
+from src.validators.keystores.base import BaseKeystore
+from src.validators.keystores.load import load_keystore
+from src.validators.keystores.local import LocalKeystore
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,17 @@ async def run_tasks():
     # Cluster lock contains public keys and public key shares
     cluster_lock = load_cluster_lock()
 
+    # keystore is a mapping private-key-share -> public-key-share
+    # Testing setup: multiple keystores
+    # Production setup: single keystore
+    is_multiple_local_keystores = False
+    if not settings.remote_signer_url and settings.keystores_dir_template:
+        is_multiple_local_keystores = True
+
+    keystore: BaseKeystore | None = None
+    if not is_multiple_local_keystores:
+        keystore = await load_keystore()
+
     for share_index in share_indexes:
         node_index = share_index - 1
 
@@ -30,13 +44,16 @@ async def run_tasks():
             public_key_share = dv['public_shares'][node_index]
             pub_key_to_share[public_key] = public_key_share
 
-        keystores_dir = Path(settings.keystores_dir_template.format(node_index=node_index))
-
-        # keystore is a mapping private-key-share -> public-key-share
-        keystore = await LocalKeystore.load(keystores_dir)
+        if is_multiple_local_keystores:
+            keystores_dir = Path(settings.keystores_dir_template.format(node_index=node_index))
+            keystore = await LocalKeystore.load_from_dir(keystores_dir)
 
         logger.info('Starting task for share_index %s', share_index)
-        asyncio.create_task(poll_exits_and_push_signatures(pub_key_to_share, keystore, share_index))
+        asyncio.create_task(
+            poll_exits_and_push_signatures(
+                pub_key_to_share, cast(BaseKeystore, keystore), share_index
+            )
+        )
 
     # Keep tasks running
     while True:
@@ -53,11 +70,11 @@ def load_cluster_lock() -> dict:
 
 # pylint: disable=redefined-builtin
 async def poll_exits_and_push_signatures(
-    pub_key_to_share: dict[HexStr, HexStr], keystore: LocalKeystore, share_index: int
+    pub_key_to_share: dict[HexStr, HexStr], keystore: BaseKeystore, share_index: int
 ) -> None:
     async with aiohttp.ClientSession(timeout=ClientTimeout(settings.relayer_timeout)) as session:
         while True:
-            # get exits from Relayer
+            # get validators from Relayer
             exits = await poll_exits(session)
 
             # calculate exit signature shares
@@ -74,7 +91,6 @@ async def poll_exits_and_push_signatures(
                     exit['validator_index'],
                     pub_key_share,
                     settings.network_config.SHAPELLA_FORK,
-                    settings.network_config.GENESIS_VALIDATORS_ROOT,
                 )
                 public_key_to_exit_signature[public_key] = Web3.to_hex(exit_signature)
 
@@ -93,6 +109,6 @@ async def poll_exits(session):
             if exits := await relayer.get_exits(session):
                 return exits
         except (ClientError, asyncio.TimeoutError):
-            logger.exception('Failed to poll exits')
+            logger.exception('Failed to poll validators')
 
         await asyncio.sleep(settings.poll_interval)
