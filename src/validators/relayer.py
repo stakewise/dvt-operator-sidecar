@@ -12,10 +12,10 @@ async def get_exits(session: ClientSession) -> list[dict]:
     """
     `exits` represent exit messages to sign.
     """
-    res = await session.get(f'{settings.relayer_endpoint}/validators')
+    res = await session.get(f'{settings.relayer_endpoint}/exits')
     res.raise_for_status()
     jsn = await res.json()
-    return jsn['validators']
+    return jsn['exits']
 
 
 async def push_exit_signatures(
