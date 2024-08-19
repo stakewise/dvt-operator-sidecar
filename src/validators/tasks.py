@@ -104,6 +104,9 @@ async def poll_exits_and_push_signatures(
 
 
 async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
+    """
+    Periodically checks relayer for new validator exits.
+    """
     while True:
         try:
             if exits := await relayer.get_exits(session):

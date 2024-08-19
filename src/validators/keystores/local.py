@@ -1,9 +1,7 @@
 import logging
-from dataclasses import dataclass
 from os import listdir
 from os.path import isfile
 from pathlib import Path
-from typing import NewType
 
 import milagro_bls_binding as bls
 from eth_typing import BLSSignature, HexStr
@@ -13,23 +11,13 @@ from web3 import Web3
 
 from src.config import settings
 from src.validators.keystores.base import BaseKeystore
-from src.validators.keystores.typings import BLSPrivkey
+from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
 
 logger = logging.getLogger(__name__)
 
 
 class KeystoreException(ValueError):
     ...
-
-
-@dataclass
-class KeystoreFile:
-    name: str
-    password: str
-    password_file: Path
-
-
-Keys = NewType('Keys', dict[HexStr, BLSPrivkey])
 
 
 class LocalKeystore(BaseKeystore):

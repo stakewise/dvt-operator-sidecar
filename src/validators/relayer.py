@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 async def get_exits(session: ClientSession) -> list[dict]:
+    """
+    `exits` represent exit messages to sign.
+    """
     res = await session.get(f'{settings.relayer_endpoint}/validators')
     res.raise_for_status()
     jsn = await res.json()
