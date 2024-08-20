@@ -15,7 +15,6 @@ jobs:
         with:
           images: |
             europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-relayer
-            stakewiselabs/dvt-relayer
           flavor: |
             latest=auto
           tags: |
