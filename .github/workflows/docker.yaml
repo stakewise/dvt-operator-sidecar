@@ -47,7 +47,6 @@ jobs:
     steps:
       - id: commit-hash
         uses: pr-mpt/actions-commit-hash@v2
-
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
