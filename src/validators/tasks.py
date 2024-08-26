@@ -87,6 +87,9 @@ async def poll_exits_and_push_signatures(
                     # Another cluster owns current public key
                     continue
 
+                if exit['is_exit_signature_ready']:
+                    continue
+
                 exit_signature = await keystore.get_exit_signature(
                     exit['validator_index'],
                     pub_key_share,
