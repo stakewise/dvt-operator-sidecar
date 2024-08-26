@@ -19,5 +19,5 @@ async def load_keystore() -> BaseKeystore:
         return remote_keystore
     local_keystore = await LocalKeystore.load()
     if not local_keystore:
-        raise RuntimeError('No keystore, no remote signer or hashi vault URL provided')
+        raise RuntimeError('No keystore or remote signer URL provided')
     return local_keystore

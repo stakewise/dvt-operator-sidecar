@@ -77,7 +77,6 @@ class LocalKeystore(BaseKeystore):
     @staticmethod
     def list_keystore_files(keystores_dir: Path) -> list[KeystoreFile]:
         keystores_password_dir = keystores_dir
-        keystores_password_file = keystores_dir
 
         res: list[KeystoreFile] = []
         for f in listdir(keystores_dir):
@@ -85,8 +84,6 @@ class LocalKeystore(BaseKeystore):
                 continue
 
             password_file = keystores_password_dir / f.replace('.json', '.txt')
-            if not isfile(password_file):
-                password_file = keystores_password_file
 
             password = LocalKeystore._load_keystores_password(password_file)
             res.append(KeystoreFile(name=f, password=password, password_file=password_file))
