@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
+from urllib.parse import urljoin
 
 import milagro_bls_binding as bls
 from aiohttp import ClientSession, ClientTimeout
@@ -85,7 +86,7 @@ class RemoteSignerKeystore(BaseKeystore):
 
     @staticmethod
     async def _get_remote_signer_public_keys() -> list[HexStr]:
-        signer_url = f'{settings.remote_signer_url}/api/v1/eth2/publicKeys'
+        signer_url = urljoin(settings.remote_signer_url, '/api/v1/eth2/publicKeys')
         async with ClientSession(timeout=ClientTimeout(settings.remote_signer_timeout)) as session:
             response = await session.get(signer_url)
 
@@ -115,7 +116,7 @@ class RemoteSignerKeystore(BaseKeystore):
             voluntary_exit=VoluntaryExitMessage(epoch=fork.epoch, validator_index=validator_index),
         )
 
-        signer_url = f'{settings.remote_signer_url}/api/v1/eth2/sign/0x{public_key.hex()}'
+        signer_url = urljoin(settings.remote_signer_url, f'/api/v1/eth2/sign/0x{public_key.hex()}')
         async with ClientSession(timeout=ClientTimeout(settings.remote_signer_timeout)) as session:
             response = await session.post(signer_url, json=dataclasses.asdict(data))
 
