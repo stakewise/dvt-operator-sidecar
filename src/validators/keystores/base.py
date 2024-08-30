@@ -5,6 +5,8 @@ from sw_utils.typings import ConsensusFork
 
 
 class BaseKeystore(abc.ABC):
+    pubkey_to_share: dict[HexStr, HexStr]
+
     @staticmethod
     @abc.abstractmethod
     async def load() -> 'BaseKeystore':
