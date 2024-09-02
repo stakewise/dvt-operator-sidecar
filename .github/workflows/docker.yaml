@@ -14,7 +14,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-relayer
+            europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-operator-sidecar
           flavor: |
             latest=auto
           tags: |
@@ -49,7 +49,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-relayer:sha-${{ steps.commit-hash.outputs.short }}"
+          image-ref: "europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-operator-sidecar:sha-${{ steps.commit-hash.outputs.short }}"
           format: "table"
           exit-code: "1"
           vuln-type: "os,library"
