@@ -29,7 +29,9 @@ obol_keystores_dir_template: str = config('OBOL_KEYSTORES_DIR_TEMPLATE', default
 
 obol_cluster_lock_file = Path(config('OBOL_CLUSTER_LOCK_FILE'), default='')
 
-obol_node_index: int = config('OBOL_NODE_INDEX', cast=int)
+obol_node_index: int | None = config(
+    'OBOL_NODE_INDEX', cast=lambda x: int(x) if x != '' else None, default=''
+)
 obol_node_indexes: list[int] = config('OBOL_NODE_INDEXES', cast=Csv(int), default='')
 
 ssv_operator_key_file: str = config('SSV_OPERATOR_KEY_FILE', default='')
@@ -38,7 +40,9 @@ ssv_operator_password_file: str = config('SSV_OPERATOR_PASSWORD_FILE', default='
 ssv_operator_key_file_template: str = config('SSV_OPERATOR_KEY_FILE_TEMPLATE', default='')
 ssv_operator_password_file_template: str = config('SSV_OPERATOR_PASSWORD_FILE_TEMPLATE', default='')
 
-ssv_operator_id: int = config('SSV_OPERATOR_ID', cast=int)
+ssv_operator_id: int | None = config(
+    'SSV_OPERATOR_ID', cast=lambda x: int(x) if x != '' else None, default=''
+)
 ssv_operator_ids: list[int] = config('SSV_OPERATOR_IDS', cast=Csv(int), default='')
 
 ssv_keyshares_file: str = config('SSV_KEYSHARES_FILE', default='')

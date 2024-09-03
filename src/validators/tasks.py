@@ -89,11 +89,23 @@ async def ssv_run_tasks() -> None:
 
 
 def get_obol_node_indexes() -> list[int]:
-    return settings.obol_node_indexes or [settings.obol_node_index]
+    if settings.obol_node_indexes:
+        return settings.obol_node_indexes
+
+    if settings.obol_node_index is not None:
+        return [settings.obol_node_index]
+
+    raise RuntimeError('OBOL_NODE_INDEXES or OBOL_NODE_INDEX must be set')
 
 
 def get_ssv_operator_ids() -> list[int]:
-    return settings.ssv_operator_ids or [settings.ssv_operator_id]
+    if settings.ssv_operator_ids:
+        return settings.ssv_operator_ids
+
+    if settings.ssv_operator_id is not None:
+        return [settings.ssv_operator_id]
+
+    raise RuntimeError('SSV_OPERATOR_IDS or SSV_OPERATOR_ID must be set')
 
 
 # pylint: disable=redefined-builtin

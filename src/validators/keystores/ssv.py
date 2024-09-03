@@ -35,10 +35,12 @@ class SSVKeystore(BaseKeystore):
 
     @staticmethod
     async def load() -> 'SSVKeystore':
-        if not settings.ssv_operator_id:
+        if settings.ssv_operator_id is None:
             raise RuntimeError('SSV_OPERATOR_ID must be set')
-        if not settings.ssv_keyshares_file:
-            raise RuntimeError('SSV_KEYSHARES_FILE must be set')
+        if not settings.ssv_operator_key_file:
+            raise RuntimeError('SSV_OPERATOR_KEY_FILE must be set')
+        if not settings.ssv_operator_password_file:
+            raise RuntimeError('SSV_OPERATOR_PASSWORD_FILE must be set')
 
         return SSVKeystore.load_as_operator(
             settings.ssv_operator_id,
@@ -51,6 +53,9 @@ class SSVKeystore(BaseKeystore):
         ssv_operator_id: int, ssv_operator_key_file: str, ssv_operator_password_file: str
     ) -> 'SSVKeystore':
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
+
+        if not settings.ssv_keyshares_file:
+            raise RuntimeError('SSV_KEYSHARES_FILE must be set')
         key_shares = SSVKeySharesFile.load(
             settings.ssv_keyshares_file,
             ssv_operator_id,

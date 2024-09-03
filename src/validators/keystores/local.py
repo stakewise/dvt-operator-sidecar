@@ -29,7 +29,7 @@ class LocalKeystore(BaseKeystore):
     async def load() -> 'LocalKeystore':
         if not settings.obol_keystores_dir:
             raise RuntimeError('OBOL_KEYSTORES_DIR must be set')
-        if not settings.obol_node_index:
+        if settings.obol_node_index is None:
             raise RuntimeError('OBOL_NODE_INDEX must be set')
         return await LocalKeystore.load_from_dir(
             Path(settings.obol_keystores_dir), settings.obol_node_index
