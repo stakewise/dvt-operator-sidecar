@@ -4,9 +4,9 @@ import logging
 from dataclasses import dataclass
 
 import milagro_bls_binding as bls
-from Crypto.Cipher import PKCS1_v1_5
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
+from Cryptodome.Cipher import PKCS1_v1_5
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Random import get_random_bytes
 from eth_account import Account
 from eth_typing import BLSSignature, HexStr
 from sw_utils import ConsensusFork, get_exit_message_signing_root
