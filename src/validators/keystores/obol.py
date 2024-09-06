@@ -18,7 +18,12 @@ from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
 logger = logging.getLogger(__name__)
 
 
-class LocalKeystore(BaseKeystore):
+class ObolKeystore(BaseKeystore):
+    """
+    Similar to LocalKeystore from Stakewise Operator.
+    Also pubkey_to_share attribute is filled using cluster lock file.
+    """
+
     keys: Keys
 
     def __init__(self, keys: Keys, pubkey_to_share: dict[HexStr, HexStr]):
@@ -26,30 +31,30 @@ class LocalKeystore(BaseKeystore):
         self.pubkey_to_share = pubkey_to_share
 
     @staticmethod
-    async def load() -> 'LocalKeystore':
+    async def load() -> 'ObolKeystore':
         if not settings.obol_keystores_dir:
             raise RuntimeError('OBOL_KEYSTORES_DIR must be set')
         if settings.obol_node_index is None:
             raise RuntimeError('OBOL_NODE_INDEX must be set')
-        return await LocalKeystore.load_from_dir(
+        return await ObolKeystore.load_from_dir(
             Path(settings.obol_keystores_dir), settings.obol_node_index
         )
 
     @staticmethod
-    async def load_from_dir(keystores_dir: Path, node_index: int) -> 'LocalKeystore':
+    async def load_from_dir(keystores_dir: Path, node_index: int) -> 'ObolKeystore':
         """Extracts private keys from the keys."""
-        keystore_files = LocalKeystore.list_keystore_files(keystores_dir)
+        keystore_files = ObolKeystore.list_keystore_files(keystores_dir)
         logger.info('Loading keys from %s...', keystores_dir)
         results = [
-            LocalKeystore._process_keystore_file(keystore_file, keystores_dir)
+            ObolKeystore._process_keystore_file(keystore_file, keystores_dir)
             for keystore_file in keystore_files
         ]
         keys = dict(results)
 
         logger.info('Loaded %d keys', len(keys))
 
-        pubkey_to_share = LocalKeystore.get_pubkey_to_share(node_index)
-        return LocalKeystore(Keys(keys), pubkey_to_share)
+        pubkey_to_share = ObolKeystore.get_pubkey_to_share(node_index)
+        return ObolKeystore(Keys(keys), pubkey_to_share)
 
     @staticmethod
     def load_cluster_lock() -> dict:
@@ -57,7 +62,7 @@ class LocalKeystore(BaseKeystore):
 
     @staticmethod
     def get_pubkey_to_share(node_index: int) -> dict[HexStr, HexStr]:
-        cluster_lock = LocalKeystore.load_cluster_lock()
+        cluster_lock = ObolKeystore.load_cluster_lock()
 
         pub_key_to_share = {}
         for dv in cluster_lock['distributed_validators']:
@@ -106,7 +111,7 @@ class LocalKeystore(BaseKeystore):
 
             password_file = keystores_password_dir / f.replace('.json', '.txt')
 
-            password = LocalKeystore._load_keystores_password(password_file)
+            password = ObolKeystore._load_keystores_password(password_file)
             res.append(KeystoreFile(name=f, password=password, password_file=password_file))
 
         return res

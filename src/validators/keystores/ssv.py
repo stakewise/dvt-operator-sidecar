@@ -35,6 +35,9 @@ class SSVKeystore(BaseKeystore):
 
     @staticmethod
     async def load() -> 'SSVKeystore':
+        """
+        Loads validator keys in the case of single operator-id (production setup).
+        """
         if settings.ssv_operator_id is None:
             raise RuntimeError('SSV_OPERATOR_ID must be set')
         if not settings.ssv_operator_key_file:
@@ -52,6 +55,10 @@ class SSVKeystore(BaseKeystore):
     def load_as_operator(
         ssv_operator_id: int, ssv_operator_key_file: str, ssv_operator_password_file: str
     ) -> 'SSVKeystore':
+        """
+        Loads validator keys from keyshares json file,
+        filters key shares related to a given operator.
+        """
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
 
         if not settings.ssv_keyshares_file:
@@ -100,42 +107,84 @@ class SSVKeystore(BaseKeystore):
 
 
 class SSVKeySharesFile:
+    """
+    Keyshares json file contains batch of validator keys split to shares.
+    All shares are encrypted with operator keys.
+    """
+
     @staticmethod
     def load(
         key_shares_path: str,
         operator_id: int,
         operator_key: RSA.RsaKey,
-    ) -> list['SSVKeyShare']:
+    ) -> list['SSVValidatorKeyShares']:
         """
-        :param key_shares_path:
-        :param operator_id:
-        :param operator_key:
-        :return:
+        Loads batch of validators from keyshares file
         """
         logger.info('Loading keys from %s for operator %s...', key_shares_path, operator_id)
         with open(key_shares_path, encoding='ascii') as f:
             keyshares_json = json.load(f)
 
-        key_shares: list[SSVKeyShare] = []
+        key_shares: list[SSVValidatorKeyShares] = []
 
         for shares_item in keyshares_json['shares']:
-            key_shares.append(SSVKeyShare.from_dict(shares_item, operator_id, operator_key))
+            key_shares.append(
+                SSVValidatorKeyShares.from_dict(shares_item, operator_id, operator_key)
+            )
 
         logger.info('Loaded %d keys', len(key_shares))
         return key_shares
 
 
 @dataclass
-class SSVKeyShare:
+class SSVValidatorKeyShares:
+    """
+    Represents key shares for a single validator
+    """
+
     key_share: BLSPrivkey
     public_key_share: HexStr
     public_key: HexStr
 
     @staticmethod
-    def from_dict(shares_item: dict, operator_id: int, operator_key: RSA.RsaKey) -> 'SSVKeyShare':
+    def from_dict(
+        shares_item: dict, operator_id: int, operator_key: RSA.RsaKey
+    ) -> 'SSVValidatorKeyShares':
+        """
+        from_dict converts shares_item dict into SSVValidatorKeyShares object
+
+        shares_item contains:
+        * operator ids and public keys
+        * validator public key
+        * validator key shares encrypted with operator keys
+
+        shares_item structure:
+        {
+          "data": {
+            "ownerNonce": int,
+            "ownerAddress": hex string,
+            "publicKey": hex string,
+            "operators": [
+              {
+                "id": int,
+                "operatorKey": string
+              },
+              ...
+            ]
+          },
+          "payload": {
+            "publicKey": hex string,
+            "operatorIds": list[int],
+            "sharesData": hex string
+          }
+        }
+
+        Reference for shares data parsing and decrypting:
+        https://github.com/ssvlabs/ssv/blob/main/eth/eventhandler/handlers.go
+        """
         operators_data = shares_item['data']['operators']
         operator_count = len(operators_data)
-        operator_index = SSVKeyShare.get_operator_index(operators_data, operator_id)
+        operator_index = SSVValidatorKeyShares.get_operator_index(operators_data, operator_id)
 
         shares_data = SSVSharesData.from_bytes(
             Web3.to_bytes(hexstr=HexStr(shares_item['payload']['sharesData'])), operator_count
@@ -143,7 +192,7 @@ class SSVKeyShare:
 
         public_key_share = shares_data.public_key_shares[operator_index]
         encrypted_key_share = shares_data.encrypted_key_shares[operator_index]
-        key_share = SSVKeyShare.decrypt_rsa_pkcs1_v1_5(encrypted_key_share, operator_key)
+        key_share = SSVValidatorKeyShares.decrypt_rsa_pkcs1_v1_5(encrypted_key_share, operator_key)
         logger.debug('decrypted to %s', Web3.to_hex(key_share))
 
         derived_public_key_share = bls.SkToPk(key_share)
@@ -151,7 +200,7 @@ class SSVKeyShare:
             raise RuntimeError('public key mismatch')
 
         public_key = shares_item['data']['publicKey']
-        return SSVKeyShare(
+        return SSVValidatorKeyShares(
             key_share=BLSPrivkey(key_share),
             public_key_share=Web3.to_hex(public_key_share),
             public_key=public_key,
@@ -198,6 +247,14 @@ class SSVKeyShare:
 class SSVOperator:
     @staticmethod
     def load_key(operator_key_path: str, operator_password_path: str) -> RSA.RsaKey:
+        """
+        SSV operator key is stored in format similar to BLS keystore.
+        Although this format does not strictly conform to EIP standard.
+        Keystore contains RSA private key in PEM format.
+        PEM string is unencrypted. So encryption is only on keystore level.
+        See key file example in SSV docs:
+        https://docs.ssv.network/operator-user-guides/operator-node/installation
+        """
         if not settings.ssv_operator_key_file:
             raise RuntimeError('SSV_OPERATOR_KEY_FILE must be set')
         if not settings.ssv_operator_password_file:
@@ -232,7 +289,7 @@ class SSVOperator:
     @staticmethod
     def public_key_from_string(s: str) -> RSA.RsaKey:
         """
-        :param s: operator public key, typically looks like 'LS0t...'
+        :param s: operator public key, base64 encoded, typically looks like 'LS0t...'
         """
         return RSA.import_key(base64.b64decode(s))
 
@@ -240,7 +297,7 @@ class SSVOperator:
 @dataclass
 class SSVSharesData:
     """
-    Represents key shares for single validator
+    Represents key shares data for single validator.
     """
 
     public_key_shares: list[bytes]
@@ -248,6 +305,10 @@ class SSVSharesData:
 
     @staticmethod
     def from_bytes(data: bytes, operator_count: int) -> 'SSVSharesData':
+        """
+        Parses shares data string into SSVSharesData object.
+        No decryption here, just parsing.
+        """
         # offsets are in bytes
         signature_offset = 96  # BLS signature length
         public_key_length = 48  # BLS pubkey length

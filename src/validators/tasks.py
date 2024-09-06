@@ -13,7 +13,7 @@ from src.config.settings import OBOL, SSV
 from src.validators import relayer
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.load import load_keystore
-from src.validators.keystores.local import LocalKeystore
+from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.ssv import SSVKeystore
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def obol_run_tasks() -> None:
             obol_keystores_dir = Path(
                 settings.obol_keystores_dir_template.format(node_index=node_index)
             )
-            keystore = await LocalKeystore.load_from_dir(obol_keystores_dir, node_index)
+            keystore = await ObolKeystore.load_from_dir(obol_keystores_dir, node_index)
 
         logger.info('Starting task for node index %s', node_index)
 
