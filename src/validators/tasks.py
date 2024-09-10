@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from pathlib import Path
 from typing import cast
@@ -10,49 +9,46 @@ from eth_typing import HexStr
 from web3 import Web3
 
 from src.config import settings
+from src.config.settings import OBOL, SSV
 from src.validators import relayer
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.load import load_keystore
-from src.validators.keystores.local import LocalKeystore
+from src.validators.keystores.obol import ObolKeystore
+from src.validators.keystores.ssv import SSVKeystore
 
 logger = logging.getLogger(__name__)
 
 
 async def run_tasks() -> None:
-    share_indexes = get_share_indexes()
+    if settings.cluster_type == OBOL:
+        await obol_run_tasks()
 
-    # Cluster lock contains public keys and public key shares
-    cluster_lock = load_cluster_lock()
+    if settings.cluster_type == SSV:
+        await ssv_run_tasks()
+
+
+async def obol_run_tasks() -> None:
+    obol_node_indexes = get_obol_node_indexes()
 
     # keystore is a mapping private-key-share -> public-key-share
     # Testing setup: multiple keystores
     # Production setup: single keystore
-    is_multiple_local_keystores = False
-    if not settings.remote_signer_url and settings.keystores_dir_template:
-        is_multiple_local_keystores = True
-
     keystore: BaseKeystore | None = None
-    if not is_multiple_local_keystores:
+    if not settings.obol_keystores_dir_template:
         keystore = await load_keystore()
 
-    for share_index in share_indexes:
-        node_index = share_index - 1
-
-        pub_key_to_share = {}
-        for dv in cluster_lock['distributed_validators']:
-            public_key = dv['distributed_public_key']
-            public_key_share = dv['public_shares'][node_index]
-            pub_key_to_share[public_key] = public_key_share
-
-        if is_multiple_local_keystores:
-            keystores_dir = Path(settings.keystores_dir_template.format(node_index=node_index))
-            keystore = await LocalKeystore.load_from_dir(keystores_dir)
-
-        logger.info('Starting task for share_index %s', share_index)
-        asyncio.create_task(
-            poll_exits_and_push_signatures(
-                pub_key_to_share, cast(BaseKeystore, keystore), share_index
+    for node_index in obol_node_indexes:
+        if settings.obol_keystores_dir_template:
+            obol_keystores_dir = Path(
+                settings.obol_keystores_dir_template.format(node_index=node_index)
             )
+            keystore = await ObolKeystore.load_from_dir(obol_keystores_dir, node_index)
+
+        logger.info('Starting task for node index %s', node_index)
+
+        share_index = node_index + 1
+        asyncio.create_task(
+            poll_exits_and_push_signatures(cast(BaseKeystore, keystore), share_index)
         )
 
     # Keep tasks running
@@ -60,18 +56,60 @@ async def run_tasks() -> None:
         await asyncio.sleep(0.1)
 
 
-def get_share_indexes() -> list[int]:
-    return settings.share_indexes or [settings.share_index]
+async def ssv_run_tasks() -> None:
+    ssv_operator_ids = get_ssv_operator_ids()
+
+    # keystore is a mapping private-key-share -> public-key-share
+    # Testing setup: multiple keystores
+    # Production setup: single keystore
+    keystore: BaseKeystore | None = None
+    if not settings.ssv_operator_key_file_template:
+        keystore = await load_keystore()
+
+    for ssv_operator_id in ssv_operator_ids:
+        if settings.ssv_operator_key_file_template:
+            ssv_operator_key_file = settings.ssv_operator_key_file_template.format(
+                operator_id=ssv_operator_id
+            )
+            ssv_operator_password_file = settings.ssv_operator_password_file_template.format(
+                operator_id=ssv_operator_id
+            )
+            keystore = SSVKeystore.load_as_operator(
+                ssv_operator_id, ssv_operator_key_file, ssv_operator_password_file
+            )
+
+        logger.info('Starting task for operator id %s', ssv_operator_id)
+        asyncio.create_task(
+            poll_exits_and_push_signatures(cast(BaseKeystore, keystore), ssv_operator_id)
+        )
+
+    # Keep tasks running
+    while True:
+        await asyncio.sleep(0.1)
 
 
-def load_cluster_lock() -> dict:
-    return json.load(open(settings.obol_cluster_lock_path, encoding='ascii'))
+def get_obol_node_indexes() -> list[int]:
+    if settings.obol_node_indexes:
+        return settings.obol_node_indexes
+
+    if settings.obol_node_index is not None:
+        return [settings.obol_node_index]
+
+    raise RuntimeError('OBOL_NODE_INDEXES or OBOL_NODE_INDEX must be set')
+
+
+def get_ssv_operator_ids() -> list[int]:
+    if settings.ssv_operator_ids:
+        return settings.ssv_operator_ids
+
+    if settings.ssv_operator_id is not None:
+        return [settings.ssv_operator_id]
+
+    raise RuntimeError('SSV_OPERATOR_IDS or SSV_OPERATOR_ID must be set')
 
 
 # pylint: disable=redefined-builtin
-async def poll_exits_and_push_signatures(
-    pub_key_to_share: dict[HexStr, HexStr], keystore: BaseKeystore, share_index: int
-) -> None:
+async def poll_exits_and_push_signatures(keystore: BaseKeystore, share_index: int) -> None:
     async with aiohttp.ClientSession(timeout=ClientTimeout(settings.relayer_timeout)) as session:
         while True:
             # get validators from Relayer
@@ -82,7 +120,7 @@ async def poll_exits_and_push_signatures(
             for exit in exits:
                 public_key = exit['public_key']
 
-                pub_key_share = pub_key_to_share.get(public_key)
+                pub_key_share = keystore.pubkey_to_share.get(public_key)
                 if pub_key_share is None:
                     # Another cluster owns current public key
                     continue
