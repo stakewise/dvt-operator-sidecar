@@ -1,8 +1,8 @@
 import logging
-from urllib.parse import urljoin
 
 from aiohttp import ClientSession
 from eth_typing import HexStr
+from sw_utils.common import urljoin
 
 from src.config import settings
 
