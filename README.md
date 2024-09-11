@@ -24,10 +24,39 @@ DVT sidecar:
 
 ## Testing
 
+This section is about integration testing, when sidecar works in conjunction with DVT Relayer and Stakewise Operator.
+
 Running the whole cluster of DVT sidecars locally may be cumbersome.
 For testing purpose single sidecar may work on behalf of several DVT operators.
-To do that you have to fill `SHARE_INDEXES` in sidecar's environment. For example:
+So there are 2 ways to initialize environment: one for production and another one for testing.
 
-```text
-SHARE_INDEXES=1,2,3,4
+Example of production setup for Obol:
+
+```ini
+OBOL_KEYSTORES_DIR_TEMPLATE=node0/validator_keys
+OBOL_NODE_INDEX=0
+```
+
+In testing setup you can parametrize keystores path so that single sidecar will be using multiple keystores:
+
+```ini
+OBOL_KEYSTORES_DIR_TEMPLATE=node{node_index}/validator_keys
+OBOL_NODE_INDEXES=0,1,2,3
+```
+
+Example of production setup for SSV:
+
+```ini
+SSV_OPERATOR_KEY_FILE=encrypted_private_key.json
+SSV_OPERATOR_PASSWORD_FILE=password.txt
+SSV_OPERATOR_ID=123
+```
+
+In testing setup you can parametrize SSV operator key path.
+So that sidecar will be acting on behalf of multiple SSV operators.
+
+```ini
+SSV_OPERATOR_KEY_FILE_TEMPLATE=operator-{operator_id}/encrypted_private_key.json
+SSV_OPERATOR_PASSWORD_FILE_TEMPLATE=operator-{operator_id}/password.txt
+SSV_OPERATOR_IDS=123,456
 ```
