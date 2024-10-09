@@ -21,13 +21,19 @@ logger = logging.getLogger(__name__)
 
 async def run_tasks() -> None:
     if settings.cluster_type == OBOL:
-        await obol_run_tasks()
+        await obol_create_tasks()
 
     if settings.cluster_type == SSV:
-        await ssv_run_tasks()
+        await ssv_create_tasks()
+
+    logger.info('All tasks started')
+
+    # Keep tasks running
+    while True:
+        await asyncio.sleep(0.1)
 
 
-async def obol_run_tasks() -> None:
+async def obol_create_tasks() -> None:
     obol_node_indexes = get_obol_node_indexes()
 
     # keystore is a mapping private-key-share -> public-key-share
@@ -51,12 +57,8 @@ async def obol_run_tasks() -> None:
             poll_exits_and_push_signatures(cast(BaseKeystore, keystore), share_index)
         )
 
-    # Keep tasks running
-    while True:
-        await asyncio.sleep(0.1)
 
-
-async def ssv_run_tasks() -> None:
+async def ssv_create_tasks() -> None:
     ssv_operator_ids = get_ssv_operator_ids()
 
     # keystore is a mapping private-key-share -> public-key-share
@@ -82,10 +84,6 @@ async def ssv_run_tasks() -> None:
         asyncio.create_task(
             poll_exits_and_push_signatures(cast(BaseKeystore, keystore), ssv_operator_id)
         )
-
-    # Keep tasks running
-    while True:
-        await asyncio.sleep(0.1)
 
 
 def get_obol_node_indexes() -> list[int]:
