@@ -12,6 +12,9 @@ logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 async def startup_checks() -> bool:
+    """
+    :return: True if all checks are ok, False otherwise
+    """
     try:
         await _check_relayer_endpoint()
     except Exception as e:
