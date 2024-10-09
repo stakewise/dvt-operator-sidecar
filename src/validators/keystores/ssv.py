@@ -193,11 +193,11 @@ class SSVValidatorKeyShares:
         public_key_share = shares_data.public_key_shares[operator_index]
         encrypted_key_share = shares_data.encrypted_key_shares[operator_index]
         key_share = SSVValidatorKeyShares.decrypt_rsa_pkcs1_v1_5(encrypted_key_share, operator_key)
-        logger.debug('decrypted to %s', Web3.to_hex(key_share))
+        logger.debug('Decrypted to %s', Web3.to_hex(key_share))
 
         derived_public_key_share = bls.SkToPk(key_share)
         if public_key_share != derived_public_key_share:
-            raise RuntimeError('public key mismatch')
+            raise RuntimeError('Public key mismatch')
 
         public_key = shares_item['data']['publicKey']
         return SSVValidatorKeyShares(
@@ -214,7 +214,7 @@ class SSVValidatorKeyShares:
         for operator_index, operator_dict in enumerate(operators_data):
             if operator_id == operator_dict['id']:
                 return operator_index
-        raise RuntimeError('Can not get operator index')
+        raise RuntimeError(f'SSV operator id {operator_id} not found in SSV keyshares file')
 
     @staticmethod
     def decrypt_rsa_pkcs1_v1_5(data: bytes, rsa_key: RSA.RsaKey) -> bytes:
@@ -238,7 +238,7 @@ class SSVValidatorKeyShares:
         # decrypt returns sentinel if decryption failed
         decrypted_data = cipher_rsa.decrypt(data, sentinel, expected_pt_len=expected_pt_len)
         if decrypted_data == sentinel:
-            raise ValueError('can not decrypt')
+            raise ValueError('Can not decrypt validator key share')
 
         # convert from ascii to pure bytes
         return Web3.to_bytes(hexstr=HexStr(decrypted_data.decode('ascii')))
@@ -282,7 +282,7 @@ class SSVOperator:
         # Compare public key from json and the one derived from private key
         public_key_2 = SSVOperator.public_key_from_string(jsn['pubKey'])
         if public_key != public_key_2:
-            raise RuntimeError('public key mismatch')
+            raise RuntimeError('Public key mismatch')
 
         return private_key
 
@@ -318,7 +318,7 @@ class SSVSharesData:
         pub_keys_offset = public_key_length * operator_count + signature_offset
         shares_expected_length = encrypted_key_length * operator_count + pub_keys_offset
         if len(data) != shares_expected_length:
-            raise RuntimeError('unexpected shares data length')
+            raise RuntimeError('Unexpected shares data length')
 
         public_key_shares = to_chunks(data[signature_offset:pub_keys_offset], public_key_length)
 

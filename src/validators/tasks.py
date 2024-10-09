@@ -8,6 +8,7 @@ from aiohttp import ClientError, ClientTimeout
 from eth_typing import HexStr
 from web3 import Web3
 
+from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.config.settings import OBOL, SSV
 from src.validators import relayer
@@ -16,15 +17,23 @@ from src.validators.keystores.load import load_keystore
 from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.ssv import SSVKeystore
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 async def run_tasks() -> None:
     if settings.cluster_type == OBOL:
-        await obol_create_tasks()
+        try:
+            await obol_create_tasks()
+        except Exception as e:
+            logger.exception_verbose(e)
+            return
 
     if settings.cluster_type == SSV:
-        await ssv_create_tasks()
+        try:
+            await ssv_create_tasks()
+        except Exception as e:
+            logger.exception_verbose(e)
+            return
 
     logger.info('All tasks started')
 
@@ -150,7 +159,7 @@ async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
         try:
             if exits := await relayer.get_exits(session):
                 return exits
-        except (ClientError, asyncio.TimeoutError):
-            logger.exception('Failed to poll validators')
+        except (ClientError, asyncio.TimeoutError) as e:
+            logger.error_verbose('Failed to poll validators: %s', e)
 
         await asyncio.sleep(settings.poll_interval)
