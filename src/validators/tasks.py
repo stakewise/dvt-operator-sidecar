@@ -20,7 +20,7 @@ from src.validators.keystores.ssv import SSVKeystore
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-async def run_tasks() -> None:
+async def create_tasks() -> None:
     if settings.cluster_type == OBOL:
         try:
             await obol_create_tasks()
@@ -34,12 +34,6 @@ async def run_tasks() -> None:
         except Exception as e:
             logger.exception_verbose(e)
             return
-
-    logger.info('All tasks started')
-
-    # Keep tasks running
-    while True:
-        await asyncio.sleep(0.1)
 
 
 async def obol_create_tasks() -> None:
