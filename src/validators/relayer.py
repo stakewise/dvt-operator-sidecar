@@ -1,12 +1,14 @@
 import logging
+from typing import cast
 
 from aiohttp import ClientSession
 from eth_typing import HexStr
 from sw_utils.common import urljoin
 
+from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 async def get_exits(session: ClientSession) -> list[dict]:

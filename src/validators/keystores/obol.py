@@ -3,6 +3,7 @@ import logging
 from os import listdir
 from os.path import isfile
 from pathlib import Path
+from typing import cast
 
 import milagro_bls_binding as bls
 from eth_typing import BLSSignature, HexStr
@@ -10,12 +11,13 @@ from staking_deposit.key_handling.keystore import ScryptKeystore
 from sw_utils import ConsensusFork, get_exit_message_signing_root
 from web3 import Web3
 
+from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.exceptions import KeystoreException
 from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 class ObolKeystore(BaseKeystore):

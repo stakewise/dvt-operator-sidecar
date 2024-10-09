@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 import milagro_bls_binding as bls
 from Cryptodome.Cipher import PKCS1_v1_5
@@ -12,12 +13,13 @@ from eth_typing import BLSSignature, HexStr
 from sw_utils import ConsensusFork, get_exit_message_signing_root
 from web3 import Web3
 
+from src.common.setup_logging import ExtendedLogger
 from src.common.utils import to_chunks
 from src.config import settings
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 class SSVKeystore(BaseKeystore):

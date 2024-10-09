@@ -1,5 +1,7 @@
 import logging
+from typing import cast
 
+from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.config.settings import OBOL, SSV
 from src.validators.keystores.base import BaseKeystore
@@ -7,7 +9,7 @@ from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.remote import RemoteSignerKeystore
 from src.validators.keystores.ssv import SSVKeystore
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 async def load_keystore() -> BaseKeystore:
