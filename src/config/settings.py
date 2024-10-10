@@ -49,6 +49,9 @@ ssv_operator_ids: list[int] = config('SSV_OPERATOR_IDS', cast=Csv(int), default=
 ssv_keyshares_file: str = config('SSV_KEYSHARES_FILE', default='')
 poll_interval: int = config('POLL_INTERVAL', cast=int, default=2)
 
+ssv_api_base_url = 'https://api.ssv.network/api/v4'
+ssv_api_timeout = 10
+
 remote_signer_url: str = config('remote_signer_url', default='')
 remote_signer_timeout: int = config('REMOTE_SIGNER_TIMEOUT', cast=int, default=10)
 
