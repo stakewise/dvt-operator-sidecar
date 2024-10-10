@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from pythonjsonlogger import jsonlogger
 
+from src.common.utils import format_error
 from src.config import settings
 from src.config.settings import LOG_DATE_FORMAT, LOG_JSON
 
@@ -19,6 +20,21 @@ class JsonFormatter(jsonlogger.JsonFormatter):
             log_record['level'] = record.levelname
 
 
+class ExtendedLogger(logging.Logger):
+    def error_verbose(self, msg, *args, **kwargs):  # type: ignore
+        if settings.verbose:
+            kwargs['exc_info'] = True
+        args = [format_error(arg) if isinstance(arg, Exception) else arg for arg in args]
+        self.error(msg, *args, **kwargs)
+
+    def exception_verbose(self, e: Exception):  # type: ignore
+        self.error_verbose('%s', e)
+
+    def warning(self, msg, *args, **kwargs):  # type: ignore
+        args = [format_error(arg) if isinstance(arg, Exception) else arg for arg in args]
+        super().warning(msg, *args, **kwargs)
+
+
 def setup_logging() -> None:
     if settings.log_format == LOG_JSON:
         formatter = JsonFormatter('%(timestamp)s %(level)s %(name)s %(message)s')
@@ -30,10 +46,12 @@ def setup_logging() -> None:
         )
     else:
         logging.basicConfig(
-            format='%(asctime)s %(levelname)-8s %(message)s',
+            format='%(asctime)s %(levelname)-8s %(name)s %(message)s',
             datefmt=LOG_DATE_FORMAT,
             level=settings.log_level,
         )
+
+    logging.setLoggerClass(ExtendedLogger)
 
 
 def setup_sentry() -> None:

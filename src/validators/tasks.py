@@ -8,6 +8,7 @@ from aiohttp import ClientError, ClientTimeout
 from eth_typing import HexStr
 from web3 import Web3
 
+from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.config.settings import OBOL, SSV
 from src.validators import relayer
@@ -16,18 +17,18 @@ from src.validators.keystores.load import load_keystore
 from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.ssv import SSVKeystore
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-async def run_tasks() -> None:
+async def create_tasks() -> None:
     if settings.cluster_type == OBOL:
-        await obol_run_tasks()
+        await obol_create_tasks()
 
     if settings.cluster_type == SSV:
-        await ssv_run_tasks()
+        await ssv_create_tasks()
 
 
-async def obol_run_tasks() -> None:
+async def obol_create_tasks() -> None:
     obol_node_indexes = get_obol_node_indexes()
 
     # keystore is a mapping private-key-share -> public-key-share
@@ -51,12 +52,8 @@ async def obol_run_tasks() -> None:
             poll_exits_and_push_signatures(cast(BaseKeystore, keystore), share_index)
         )
 
-    # Keep tasks running
-    while True:
-        await asyncio.sleep(0.1)
 
-
-async def ssv_run_tasks() -> None:
+async def ssv_create_tasks() -> None:
     ssv_operator_ids = get_ssv_operator_ids()
 
     # keystore is a mapping private-key-share -> public-key-share
@@ -74,7 +71,7 @@ async def ssv_run_tasks() -> None:
             ssv_operator_password_file = settings.ssv_operator_password_file_template.format(
                 operator_id=ssv_operator_id
             )
-            keystore = SSVKeystore.load_as_operator(
+            keystore = await SSVKeystore.load_as_operator(
                 ssv_operator_id, ssv_operator_key_file, ssv_operator_password_file
             )
 
@@ -82,10 +79,6 @@ async def ssv_run_tasks() -> None:
         asyncio.create_task(
             poll_exits_and_push_signatures(cast(BaseKeystore, keystore), ssv_operator_id)
         )
-
-    # Keep tasks running
-    while True:
-        await asyncio.sleep(0.1)
 
 
 def get_obol_node_indexes() -> list[int]:
@@ -152,7 +145,7 @@ async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
         try:
             if exits := await relayer.get_exits(session):
                 return exits
-        except (ClientError, asyncio.TimeoutError):
-            logger.exception('Failed to poll validators')
+        except (ClientError, asyncio.TimeoutError) as e:
+            logger.error_verbose('Failed to poll validators: %s', e)
 
         await asyncio.sleep(settings.poll_interval)

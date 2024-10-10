@@ -27,7 +27,7 @@ class NetworkConfig:
         )
 
 
-NETWORKS = {
+NETWORKS: dict[str, NetworkConfig] = {
     MAINNET: NetworkConfig(
         SHAPELLA_FORK_VERSION=Web3.to_bytes(hexstr=HexStr('0x03000000')),
         SHAPELLA_EPOCH=194048,

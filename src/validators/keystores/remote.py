@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 import milagro_bls_binding as bls
 from aiohttp import ClientSession, ClientTimeout
@@ -10,10 +11,11 @@ from sw_utils.common import urljoin
 from sw_utils.typings import ConsensusFork
 from web3 import Web3
 
+from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.validators.keystores.base import BaseKeystore
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 @dataclass

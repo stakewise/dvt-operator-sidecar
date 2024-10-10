@@ -2,17 +2,18 @@ from pathlib import Path
 
 from decouple import Choices, Csv, config
 
-from src.config.networks import NETWORKS, NetworkConfig
+from src.config.networks import NETWORKS
 
-network: str = config('NETWORK')
-network_config: NetworkConfig = NETWORKS[network]
+network: str = config('NETWORK', cast=Choices(list(NETWORKS.keys())))
+network_config = NETWORKS[network]
 
 LOG_PLAIN = 'plain'
 LOG_JSON = 'json'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 log_level: str = config('LOG_LEVEL', default='INFO')
-log_format: str = config('LOG_FORMAT', default=LOG_PLAIN)
+log_format: str = config('LOG_FORMAT', default=LOG_PLAIN, cast=Choices([LOG_PLAIN, LOG_JSON]))
+verbose: bool = config('VERBOSE', default=False, cast=bool)
 
 sentry_dsn: str = config('SENTRY_DSN', default='')
 sentry_environment = config('SENTRY_ENVIRONMENT', default='')
@@ -47,6 +48,9 @@ ssv_operator_ids: list[int] = config('SSV_OPERATOR_IDS', cast=Csv(int), default=
 
 ssv_keyshares_file: str = config('SSV_KEYSHARES_FILE', default='')
 poll_interval: int = config('POLL_INTERVAL', cast=int, default=2)
+
+ssv_api_base_url = 'https://api.ssv.network/api/v4'
+ssv_api_timeout = 10
 
 remote_signer_url: str = config('remote_signer_url', default='')
 remote_signer_timeout: int = config('REMOTE_SIGNER_TIMEOUT', cast=int, default=10)

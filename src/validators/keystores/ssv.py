@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 import milagro_bls_binding as bls
 from Cryptodome.Cipher import PKCS1_v1_5
@@ -12,12 +13,14 @@ from eth_typing import BLSSignature, HexStr
 from sw_utils import ConsensusFork, get_exit_message_signing_root
 from web3 import Web3
 
+from src.common.setup_logging import ExtendedLogger
 from src.common.utils import to_chunks
 from src.config import settings
+from src.validators.keystores import ssv_api
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
 
-logger = logging.getLogger(__name__)
+logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
 class SSVKeystore(BaseKeystore):
@@ -45,14 +48,14 @@ class SSVKeystore(BaseKeystore):
         if not settings.ssv_operator_password_file:
             raise RuntimeError('SSV_OPERATOR_PASSWORD_FILE must be set')
 
-        return SSVKeystore.load_as_operator(
+        return await SSVKeystore.load_as_operator(
             settings.ssv_operator_id,
             settings.ssv_operator_key_file,
             settings.ssv_operator_password_file,
         )
 
     @staticmethod
-    def load_as_operator(
+    async def load_as_operator(
         ssv_operator_id: int, ssv_operator_key_file: str, ssv_operator_password_file: str
     ) -> 'SSVKeystore':
         """
@@ -60,6 +63,7 @@ class SSVKeystore(BaseKeystore):
         filters key shares related to a given operator.
         """
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
+        await SSVOperator.check_operator_key(ssv_operator_id, operator_key)
 
         if not settings.ssv_keyshares_file:
             raise RuntimeError('SSV_KEYSHARES_FILE must be set')
@@ -193,11 +197,11 @@ class SSVValidatorKeyShares:
         public_key_share = shares_data.public_key_shares[operator_index]
         encrypted_key_share = shares_data.encrypted_key_shares[operator_index]
         key_share = SSVValidatorKeyShares.decrypt_rsa_pkcs1_v1_5(encrypted_key_share, operator_key)
-        logger.debug('decrypted to %s', Web3.to_hex(key_share))
+        logger.debug('Decrypted to %s', Web3.to_hex(key_share))
 
         derived_public_key_share = bls.SkToPk(key_share)
         if public_key_share != derived_public_key_share:
-            raise RuntimeError('public key mismatch')
+            raise RuntimeError('Public key mismatch')
 
         public_key = shares_item['data']['publicKey']
         return SSVValidatorKeyShares(
@@ -214,7 +218,7 @@ class SSVValidatorKeyShares:
         for operator_index, operator_dict in enumerate(operators_data):
             if operator_id == operator_dict['id']:
                 return operator_index
-        raise RuntimeError('Can not get operator index')
+        raise RuntimeError(f'SSV operator id {operator_id} not found in SSV keyshares file')
 
     @staticmethod
     def decrypt_rsa_pkcs1_v1_5(data: bytes, rsa_key: RSA.RsaKey) -> bytes:
@@ -238,7 +242,7 @@ class SSVValidatorKeyShares:
         # decrypt returns sentinel if decryption failed
         decrypted_data = cipher_rsa.decrypt(data, sentinel, expected_pt_len=expected_pt_len)
         if decrypted_data == sentinel:
-            raise ValueError('can not decrypt')
+            raise ValueError('Can not decrypt validator key share')
 
         # convert from ascii to pure bytes
         return Web3.to_bytes(hexstr=HexStr(decrypted_data.decode('ascii')))
@@ -282,7 +286,7 @@ class SSVOperator:
         # Compare public key from json and the one derived from private key
         public_key_2 = SSVOperator.public_key_from_string(jsn['pubKey'])
         if public_key != public_key_2:
-            raise RuntimeError('public key mismatch')
+            raise RuntimeError('Public key mismatch')
 
         return private_key
 
@@ -292,6 +296,29 @@ class SSVOperator:
         :param s: operator public key, base64 encoded, typically looks like 'LS0t...'
         """
         return RSA.import_key(base64.b64decode(s))
+
+    @staticmethod
+    async def check_operator_key(ssv_operator_id: int, operator_key: RSA.RsaKey) -> None:
+        """
+        Checks that `operator_key` belongs to operator `ssv_operator_id`.
+        SSV API is used to fetch operator public key by id.
+
+        :param ssv_operator_id: SSV Operator id
+        :param operator_key: SSV Operator private key
+        """
+        logger.info('Checking SSV operator key for operator id %d...', ssv_operator_id)
+        try:
+            operator_data = await ssv_api.get_operator(ssv_operator_id)
+        except Exception as e:
+            # skip checks in case of ssv api error
+            logger.warning('SSV api error. Skip checking operator key. Error detail: %s', e)
+            return
+
+        public_key = operator_key.public_key()
+        api_public_key = SSVOperator.public_key_from_string(operator_data['public_key'])
+
+        if public_key != api_public_key:
+            raise ValueError(f'Operator key does not belong to operator {ssv_operator_id}')
 
 
 @dataclass
@@ -318,7 +345,7 @@ class SSVSharesData:
         pub_keys_offset = public_key_length * operator_count + signature_offset
         shares_expected_length = encrypted_key_length * operator_count + pub_keys_offset
         if len(data) != shares_expected_length:
-            raise RuntimeError('unexpected shares data length')
+            raise RuntimeError('Unexpected shares data length')
 
         public_key_shares = to_chunks(data[signature_offset:pub_keys_offset], public_key_length)
 
