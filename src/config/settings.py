@@ -2,17 +2,17 @@ from pathlib import Path
 
 from decouple import Choices, Csv, config
 
-from src.config.networks import NETWORKS, NetworkConfig
+from src.config.networks import NETWORKS
 
-network: str = config('NETWORK')
-network_config: NetworkConfig = NETWORKS[network]
+network: str = config('NETWORK', cast=Choices(list(NETWORKS.keys())))
+network_config = NETWORKS[network]
 
 LOG_PLAIN = 'plain'
 LOG_JSON = 'json'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 log_level: str = config('LOG_LEVEL', default='INFO')
-log_format: str = config('LOG_FORMAT', default=LOG_PLAIN)
+log_format: str = config('LOG_FORMAT', default=LOG_PLAIN, cast=Choices([LOG_PLAIN, LOG_JSON]))
 verbose: bool = config('VERBOSE', default=False, cast=bool)
 
 sentry_dsn: str = config('SENTRY_DSN', default='')
