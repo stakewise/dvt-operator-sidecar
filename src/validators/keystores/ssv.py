@@ -16,6 +16,7 @@ from web3 import Web3
 from src.common.setup_logging import ExtendedLogger
 from src.common.utils import to_chunks
 from src.config import settings
+from src.validators.keystores import ssv_api
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
 
@@ -47,14 +48,14 @@ class SSVKeystore(BaseKeystore):
         if not settings.ssv_operator_password_file:
             raise RuntimeError('SSV_OPERATOR_PASSWORD_FILE must be set')
 
-        return SSVKeystore.load_as_operator(
+        return await SSVKeystore.load_as_operator(
             settings.ssv_operator_id,
             settings.ssv_operator_key_file,
             settings.ssv_operator_password_file,
         )
 
     @staticmethod
-    def load_as_operator(
+    async def load_as_operator(
         ssv_operator_id: int, ssv_operator_key_file: str, ssv_operator_password_file: str
     ) -> 'SSVKeystore':
         """
@@ -62,6 +63,7 @@ class SSVKeystore(BaseKeystore):
         filters key shares related to a given operator.
         """
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
+        await SSVOperator.check_operator_key(ssv_operator_id, operator_key)
 
         if not settings.ssv_keyshares_file:
             raise RuntimeError('SSV_KEYSHARES_FILE must be set')
@@ -294,6 +296,29 @@ class SSVOperator:
         :param s: operator public key, base64 encoded, typically looks like 'LS0t...'
         """
         return RSA.import_key(base64.b64decode(s))
+
+    @staticmethod
+    async def check_operator_key(ssv_operator_id: int, operator_key: RSA.RsaKey) -> None:
+        """
+        Checks that `operator_key` belongs to operator `ssv_operator_id`.
+        SSV API is used to fetch operator public key by id.
+
+        :param ssv_operator_id: SSV Operator id
+        :param operator_key: SSV Operator private key
+        """
+        logger.info('Checking SSV operator key for operator id %d...', ssv_operator_id)
+        try:
+            operator_data = await ssv_api.get_operator(ssv_operator_id)
+        except Exception as e:
+            # skip checks in case of ssv api error
+            logger.warning('SSV api error. Skip checking operator key. Error detail: %s', e)
+            return
+
+        public_key = operator_key.public_key()
+        api_public_key = SSVOperator.public_key_from_string(operator_data['public_key'])
+
+        if public_key != api_public_key:
+            raise ValueError(f'Operator key does not belong to operator {ssv_operator_id}')
 
 
 @dataclass

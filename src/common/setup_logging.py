@@ -30,6 +30,10 @@ class ExtendedLogger(logging.Logger):
     def exception_verbose(self, e: Exception):  # type: ignore
         self.error_verbose('%s', e)
 
+    def warning(self, msg, *args, **kwargs):  # type: ignore
+        args = [format_error(arg) if isinstance(arg, Exception) else arg for arg in args]
+        super().warning(msg, *args, **kwargs)
+
 
 def setup_logging() -> None:
     if settings.log_format == LOG_JSON:

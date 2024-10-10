@@ -22,18 +22,10 @@ logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 async def create_tasks() -> None:
     if settings.cluster_type == OBOL:
-        try:
-            await obol_create_tasks()
-        except Exception as e:
-            logger.exception_verbose(e)
-            return
+        await obol_create_tasks()
 
     if settings.cluster_type == SSV:
-        try:
-            await ssv_create_tasks()
-        except Exception as e:
-            logger.exception_verbose(e)
-            return
+        await ssv_create_tasks()
 
 
 async def obol_create_tasks() -> None:
@@ -79,7 +71,7 @@ async def ssv_create_tasks() -> None:
             ssv_operator_password_file = settings.ssv_operator_password_file_template.format(
                 operator_id=ssv_operator_id
             )
-            keystore = SSVKeystore.load_as_operator(
+            keystore = await SSVKeystore.load_as_operator(
                 ssv_operator_id, ssv_operator_key_file, ssv_operator_password_file
             )
 

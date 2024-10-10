@@ -24,7 +24,11 @@ async def app() -> None:
     if not is_checks_ok:
         return
 
-    await create_tasks()
+    try:
+        await create_tasks()
+    except Exception as e:
+        logger.exception_verbose(e)
+        return
 
     logger.info('DVT Sidecar service started')
 
