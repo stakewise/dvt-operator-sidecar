@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from decouple import Choices, Csv, config
 
 from src.config.networks import NETWORKS
@@ -28,7 +26,7 @@ cluster_type: str = config('CLUSTER_TYPE', default='OBOL', cast=Choices([OBOL, S
 obol_keystores_dir: str = config('OBOL_KEYSTORES_DIR', default='')
 obol_keystores_dir_template: str = config('OBOL_KEYSTORES_DIR_TEMPLATE', default='')
 
-obol_cluster_lock_file = Path(config('OBOL_CLUSTER_LOCK_FILE'), default='')
+obol_cluster_lock_file = config('OBOL_CLUSTER_LOCK_FILE', default='')
 
 obol_node_index: int | None = config(
     'OBOL_NODE_INDEX', cast=lambda x: int(x) if x != '' else None, default=''
