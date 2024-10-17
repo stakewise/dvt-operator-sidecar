@@ -1,4 +1,5 @@
 import dataclasses
+import json
 import logging
 from dataclasses import dataclass
 from typing import cast
@@ -45,14 +46,40 @@ class VoluntaryExitRequestModel:
     voluntary_exit: VoluntaryExitMessage
 
 
-class RemoteSignerKeystore(BaseKeystore):
-    def __init__(self, public_keys: list[HexStr]):
+class ObolRemoteKeystore(BaseKeystore):
+    """
+    Similar to RemoteKeystore from Stakewise Operator.
+    Also pubkey_to_share attribute is filled using cluster lock file.
+    """
+
+    def __init__(self, public_keys: list[HexStr], pubkey_to_share: dict[HexStr, HexStr]):
         self._public_keys = public_keys
+        self.pubkey_to_share = pubkey_to_share
 
     @staticmethod
     async def load() -> 'BaseKeystore':
-        public_keys = await RemoteSignerKeystore._get_remote_signer_public_keys()
-        return RemoteSignerKeystore(public_keys)
+        if settings.obol_node_index is None:
+            raise RuntimeError('OBOL_NODE_INDEX must be set')
+
+        public_keys = await ObolRemoteKeystore._get_remote_signer_public_keys()
+        pubkey_to_share = ObolRemoteKeystore.get_pubkey_to_share(settings.obol_node_index)
+        return ObolRemoteKeystore(public_keys, pubkey_to_share)
+
+    @staticmethod
+    def load_cluster_lock() -> dict:
+        return json.load(open(settings.obol_cluster_lock_file, encoding='ascii'))
+
+    @staticmethod
+    def get_pubkey_to_share(node_index: int) -> dict[HexStr, HexStr]:
+        cluster_lock = ObolRemoteKeystore.load_cluster_lock()
+
+        pub_key_to_share = {}
+        for dv in cluster_lock['distributed_validators']:
+            public_key = dv['distributed_public_key']
+            public_key_share = dv['public_shares'][node_index]
+            pub_key_to_share[public_key] = public_key_share
+
+        return pub_key_to_share
 
     def __bool__(self) -> bool:
         return bool(self._public_keys)

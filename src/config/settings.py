@@ -50,11 +50,12 @@ poll_interval: int = config('POLL_INTERVAL', cast=int, default=2)
 ssv_api_base_url = 'https://api.ssv.network/api/v4'
 ssv_api_timeout = 10
 
-remote_signer_url: str = config('remote_signer_url', default='')
+remote_signer_url: str = config('REMOTE_SIGNER_URL', default='')
 remote_signer_timeout: int = config('REMOTE_SIGNER_TIMEOUT', cast=int, default=10)
 
 # validations
 
+# Check OBOL_KEYSTORES_DIR
 if (
     not remote_signer_url
     and cluster_type == OBOL
@@ -63,6 +64,15 @@ if (
 ):
     raise RuntimeError('OBOL_KEYSTORES_DIR or OBOL_KEYSTORES_DIR_TEMPLATE must be set')
 
+# Check cluster type for remote signer
+if remote_signer_url and cluster_type != OBOL:
+    raise RuntimeError('Remote signer keystore is implemented for Obol only')
+
+# Check OBOL_CLUSTER_LOCK_FILE
+if cluster_type == OBOL and not obol_cluster_lock_file:
+    raise RuntimeError('OBOL_CLUSTER_LOCK_FILE must be set')
+
+# Check SSV_OPERATOR_KEY_FILE
 if (
     not remote_signer_url
     and cluster_type == SSV
@@ -71,6 +81,7 @@ if (
 ):
     raise RuntimeError('SSV_OPERATOR_KEY_FILE or SSV_OPERATOR_KEY_FILE_TEMPLATE must be set')
 
+# Check SSV_OPERATOR_PASSWORD_FILE
 if (
     not remote_signer_url
     and cluster_type == SSV

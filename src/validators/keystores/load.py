@@ -6,7 +6,7 @@ from src.config import settings
 from src.config.settings import OBOL, SSV
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.obol import ObolKeystore
-from src.validators.keystores.remote import RemoteSignerKeystore
+from src.validators.keystores.obol_remote import ObolRemoteKeystore
 from src.validators.keystores.ssv import SSVKeystore
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
@@ -14,7 +14,7 @@ logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 async def load_keystore() -> BaseKeystore:
     if settings.remote_signer_url:
-        remote_keystore = await RemoteSignerKeystore.load()
+        remote_keystore = await ObolRemoteKeystore.load()
         logger.info(
             'Using remote signer at %s for %i public keys',
             settings.remote_signer_url,
