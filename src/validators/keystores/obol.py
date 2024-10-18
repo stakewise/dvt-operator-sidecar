@@ -60,9 +60,6 @@ class ObolKeystore(BaseKeystore):
 
     @staticmethod
     def load_cluster_lock() -> dict:
-        if not settings.obol_cluster_lock_file:
-            raise RuntimeError('OBOL_CLUSTER_LOCK_FILE must be set')
-
         return json.load(open(settings.obol_cluster_lock_file, encoding='ascii'))
 
     @staticmethod
