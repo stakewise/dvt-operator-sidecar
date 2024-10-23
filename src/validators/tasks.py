@@ -130,9 +130,12 @@ async def poll_exits_and_push_signatures(keystore: BaseKeystore, share_index: in
 
             # push exit signature shares to Relayer
             if public_key_to_exit_signature:
-                await relayer.push_exit_signatures(
-                    session, public_key_to_exit_signature, share_index
-                )
+                try:
+                    await relayer.push_exit_signatures(
+                        session, public_key_to_exit_signature, share_index
+                    )
+                except (ClientError, asyncio.TimeoutError) as e:
+                    logger.error_verbose('Failed to push exit signatures: %s', e)
 
             await asyncio.sleep(settings.poll_interval)
 
