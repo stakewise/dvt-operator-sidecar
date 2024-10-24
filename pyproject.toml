@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dvt-operator-sidecar"
-version = "v0.4.1"
+version = "v0.4.2"
 description = "StakeWise sidecar for DVT-operator"
 authors = ["StakeWise Labs <info@stakewise.io>"]
 package-mode = false
