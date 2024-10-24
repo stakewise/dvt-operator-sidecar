@@ -62,5 +62,5 @@ def setup_sentry() -> None:
         sentry_sdk.init(
             settings.sentry_dsn,
             traces_sample_rate=0.1,
-            environment=settings.sentry_environment,
+            environment=settings.sentry_environment or settings.network,
         )
