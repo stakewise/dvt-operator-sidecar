@@ -106,3 +106,7 @@ exclude = '''
 
 [tool.coverage.report]
 fail_under = 73
+
+[tool.vulture]
+exclude = ["*/test*", "conftest.py", "networks.py"]
+min_confidence = 80
