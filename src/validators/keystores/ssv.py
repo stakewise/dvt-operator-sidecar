@@ -10,6 +10,7 @@ from Cryptodome.PublicKey import RSA
 from Cryptodome.Random import get_random_bytes
 from eth_account import Account
 from eth_typing import BLSSignature, HexStr
+from hexbytes import HexBytes
 from sw_utils import ConsensusFork, get_exit_message_signing_root
 from web3 import Web3
 
@@ -190,14 +191,14 @@ class SSVValidatorKeyShares:
         operator_count = len(operators_data)
         operator_index = SSVValidatorKeyShares.get_operator_index(operators_data, operator_id)
 
-        shares_data = SSVSharesData.from_bytes(
-            Web3.to_bytes(hexstr=HexStr(shares_item['payload']['sharesData'])), operator_count
+        shares_data = SSVSharesData.from_hex(
+            HexStr(shares_item['payload']['sharesData']), operator_count
         )
 
         public_key_share = shares_data.public_key_shares[operator_index]
         encrypted_key_share = shares_data.encrypted_key_shares[operator_index]
         key_share = SSVValidatorKeyShares.decrypt_rsa_pkcs1_v1_5(encrypted_key_share, operator_key)
-        logger.debug('Decrypted to %s', Web3.to_hex(key_share))
+        logger.debug('Decrypted key share: %r', key_share)
 
         derived_public_key_share = bls.SkToPk(key_share)
         if public_key_share != derived_public_key_share:
@@ -221,7 +222,7 @@ class SSVValidatorKeyShares:
         raise RuntimeError(f'SSV operator id {operator_id} not found in SSV keyshares file')
 
     @staticmethod
-    def decrypt_rsa_pkcs1_v1_5(data: bytes, rsa_key: RSA.RsaKey) -> bytes:
+    def decrypt_rsa_pkcs1_v1_5(data: bytes, rsa_key: RSA.RsaKey) -> HexBytes:
         """
         PKCS1 v1.5 is encryption scheme used for SSV key shares.
         It is default option in Golang rsa module
@@ -232,20 +233,26 @@ class SSVValidatorKeyShares:
         """
         cipher_rsa = PKCS1_v1_5.new(rsa_key)
 
-        # plain text is ascii-encoded hex string with 0x prefix
+        # plain text is ascii-encoded hex string
         # represents 32-bytes private key share
-        expected_pt_len = 66
+        # 0x prefix:
+        # * is present when generating keys alone
+        # * is missing when generating via DKG
+        sentinel_len = 64
 
         # docs recommend using sentinel of the same length as expected_pt_len
-        sentinel = get_random_bytes(expected_pt_len)
+        sentinel = get_random_bytes(sentinel_len)
 
         # decrypt returns sentinel if decryption failed
-        decrypted_data = cipher_rsa.decrypt(data, sentinel, expected_pt_len=expected_pt_len)
+        # Do not pass `expected_pt_len` because of uncertain behavior with 0x prefix
+        decrypted_data = cipher_rsa.decrypt(data, sentinel)
         if decrypted_data == sentinel:
             raise ValueError('Can not decrypt validator key share')
 
         # convert from ascii to pure bytes
-        return Web3.to_bytes(hexstr=HexStr(decrypted_data.decode('ascii')))
+        decrypted_data_bytes = Web3.to_bytes(hexstr=HexStr(decrypted_data.decode('ascii')))
+
+        return HexBytes(decrypted_data_bytes)
 
 
 class SSVOperator:
@@ -327,15 +334,17 @@ class SSVSharesData:
     Represents key shares data for single validator.
     """
 
-    public_key_shares: list[bytes]
-    encrypted_key_shares: list[bytes]
+    public_key_shares: list[HexBytes]
+    encrypted_key_shares: list[HexBytes]
 
     @staticmethod
-    def from_bytes(data: bytes, operator_count: int) -> 'SSVSharesData':
+    def from_hex(data_hex: HexStr, operator_count: int) -> 'SSVSharesData':
         """
         Parses shares data string into SSVSharesData object.
         No decryption here, just parsing.
         """
+        data = HexBytes(Web3.to_bytes(hexstr=data_hex))
+
         # offsets are in bytes
         signature_offset = 96  # BLS signature length
         public_key_length = 48  # BLS pubkey length
