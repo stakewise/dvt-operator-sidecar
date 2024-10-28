@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterator, overload
 
 import tomli
+from hexbytes import HexBytes
 
 
 @overload
@@ -13,6 +14,11 @@ def to_chunks(items: list, size: int) -> Iterator[list]:
 
 @overload
 def to_chunks(items: range, size: int) -> Iterator[range]:
+    ...
+
+
+@overload
+def to_chunks(items: HexBytes, size: int) -> Iterator[HexBytes]:
     ...
 
 
