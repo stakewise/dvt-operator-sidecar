@@ -20,7 +20,7 @@ docker run \
 -u $(id -u):$(id -g) \
 --env-file .env \
 -v $(pwd)/data:/data \
-europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-operator-sidecar:v0.4.2
+europe-west4-docker.pkg.dev/stakewiselabs/public/dvt-operator-sidecar:v0.4.3
 ```
 
 ## Development
