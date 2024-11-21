@@ -16,7 +16,9 @@ verbose: bool = config('VERBOSE', default=False, cast=bool)
 sentry_dsn: str = config('SENTRY_DSN', default='')
 sentry_environment = config('SENTRY_ENVIRONMENT', default='')
 
-relayer_endpoint: str = config('RELAYER_ENDPOINT')
+relayer_endpoint: str = config(
+    'RELAYER_ENDPOINT', default=network_config.DEFAULT_DVT_RELAYER_ENDPOINT
+)
 relayer_timeout: int = config('RELAYER_TIMEOUT', cast=int, default=10)
 
 OBOL = 'OBOL'

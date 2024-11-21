@@ -15,7 +15,7 @@ async def startup_checks() -> bool:
     """
     :return: True if all checks are ok, False otherwise
     """
-    logger.info('Checking relayer endpoint')
+    logger.info('Checking relayer endpoint %s', settings.relayer_endpoint)
     try:
         await _check_relayer_endpoint()
     except Exception as e:
