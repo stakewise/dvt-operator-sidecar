@@ -146,9 +146,11 @@ async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
     """
     while True:
         try:
-            if exits := await relayer.get_exits(session):
+            exits = await relayer.get_exits(session)
+            logger.info('Got %d validator exits from relayer', len(exits))
+            if exits:
                 return exits
         except (ClientError, asyncio.TimeoutError) as e:
-            logger.error_verbose('Failed to poll validators: %s', e)
+            logger.error_verbose('Failed to get validator exits: %s', e)
 
         await asyncio.sleep(settings.poll_interval)
