@@ -21,6 +21,16 @@ relayer_endpoint: str = config(
 )
 relayer_timeout: int = config('RELAYER_TIMEOUT', cast=int, default=10)
 
+execution_endpoint: str = config('EXECUTION_ENDPOINT', default='')
+execution_timeout: int = config('EXECUTION_TIMEOUT', cast=int, default=30)
+execution_retry_timeout: int = config('EXECUTION_RETRY_TIMEOUT', cast=int, default=60)
+
+consensus_endpoint: str = config('CONSENSUS_ENDPOINT', default='')
+consensus_timeout: int = config('CONSENSUS_TIMEOUT', cast=int, default=30)
+consensus_retry_timeout: int = config('CONSENSUS_RETRY_TIMEOUT', cast=int, default=60)
+
+database = config('DATABASE', default='dvt-operator-sidecar.db')
+
 OBOL = 'OBOL'
 SSV = 'SSV'
 cluster_type: str = config('CLUSTER_TYPE', default='OBOL', cast=Choices([OBOL, SSV]))
@@ -46,7 +56,6 @@ ssv_operator_id: int | None = config(
 )
 ssv_operator_ids: list[int] = config('SSV_OPERATOR_IDS', cast=Csv(int), default='')
 
-ssv_keyshares_file: str = config('SSV_KEYSHARES_FILE', default='')
 poll_interval: int = config('POLL_INTERVAL', cast=int, default=2)
 
 ssv_api_base_url = 'https://api.ssv.network/api/v4'

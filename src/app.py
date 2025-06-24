@@ -4,6 +4,7 @@ from typing import cast
 
 from src.common.setup_logging import ExtendedLogger, setup_logging, setup_sentry
 from src.common.utils import get_project_version
+from src.setup_database import setup_database
 
 setup_logging()
 setup_sentry()
@@ -19,6 +20,8 @@ async def app() -> None:
 
     version = get_project_version()
     logger.info('Starting DVT Sidecar service %s', version)
+
+    await setup_database()
 
     is_checks_ok = await startup_checks()
     if not is_checks_ok:

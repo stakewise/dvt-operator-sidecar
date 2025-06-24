@@ -17,6 +17,8 @@ from web3 import Web3
 from src.common.setup_logging import ExtendedLogger
 from src.common.utils import to_chunks
 from src.config import settings
+from src.ssv_operators.database import SSVValidatorCrud
+from src.ssv_operators.typings import SSVValidator
 from src.validators.keystores import ssv_api
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
@@ -66,10 +68,7 @@ class SSVKeystore(BaseKeystore):
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
         await SSVOperator.check_operator_key(ssv_operator_id, operator_key)
 
-        if not settings.ssv_keyshares_file:
-            raise RuntimeError('SSV_KEYSHARES_FILE must be set')
-        key_shares = SSVKeySharesFile.load(
-            settings.ssv_keyshares_file,
+        key_shares = await load_ssv_key_shares(
             ssv_operator_id,
             operator_key,
         )
@@ -111,34 +110,25 @@ class SSVKeystore(BaseKeystore):
         return list(self.keys.keys())
 
 
-class SSVKeySharesFile:
+async def load_ssv_key_shares(
+    operator_id: int,
+    operator_key: RSA.RsaKey,
+) -> list['SSVValidatorKeyShares']:
     """
-    Keyshares json file contains batch of validator keys split to shares.
-    All shares are encrypted with operator keys.
+    Loads key shares from validators stored in DB.
     """
+    logger.info('Loading SSV validator keys for operator %s...', operator_id)
 
-    @staticmethod
-    def load(
-        key_shares_path: str,
-        operator_id: int,
-        operator_key: RSA.RsaKey,
-    ) -> list['SSVValidatorKeyShares']:
-        """
-        Loads batch of validators from keyshares file
-        """
-        logger.info('Loading keys from %s for operator %s...', key_shares_path, operator_id)
-        with open(key_shares_path, encoding='ascii') as f:
-            keyshares_json = json.load(f)
+    validators = await SSVValidatorCrud().get_validators()
+    key_shares: list[SSVValidatorKeyShares] = []
 
-        key_shares: list[SSVValidatorKeyShares] = []
+    for validator in validators:
+        key_shares.append(
+            SSVValidatorKeyShares.from_validator(validator, operator_id, operator_key)
+        )
 
-        for shares_item in keyshares_json['shares']:
-            key_shares.append(
-                SSVValidatorKeyShares.from_dict(shares_item, operator_id, operator_key)
-            )
-
-        logger.info('Loaded %d keys', len(key_shares))
-        return key_shares
+    logger.info('Loaded %d keys', len(key_shares))
+    return key_shares
 
 
 @dataclass
@@ -152,48 +142,23 @@ class SSVValidatorKeyShares:
     public_key: HexStr
 
     @staticmethod
-    def from_dict(
-        shares_item: dict, operator_id: int, operator_key: RSA.RsaKey
+    def from_validator(
+        validator: SSVValidator, operator_id: int, operator_key: RSA.RsaKey
     ) -> 'SSVValidatorKeyShares':
         """
-        from_dict converts shares_item dict into SSVValidatorKeyShares object
-
-        shares_item contains:
-        * operator ids and public keys
-        * validator public key
-        * validator key shares encrypted with operator keys
-
-        shares_item structure:
-        {
-          "data": {
-            "ownerNonce": int,
-            "ownerAddress": hex string,
-            "publicKey": hex string,
-            "operators": [
-              {
-                "id": int,
-                "operatorKey": string
-              },
-              ...
-            ]
-          },
-          "payload": {
-            "publicKey": hex string,
-            "operatorIds": list[int],
-            "sharesData": hex string
-          }
-        }
+        Converts validator into SSVValidatorKeyShares object
 
         Reference for shares data parsing and decrypting:
         https://github.com/ssvlabs/ssv/blob/main/eth/eventhandler/handlers.go
         """
-        operators_data = shares_item['data']['operators']
-        operator_count = len(operators_data)
-        operator_index = SSVValidatorKeyShares.get_operator_index(operators_data, operator_id)
+        operator_count = len(validator.operator_ids)
 
-        shares_data = SSVSharesData.from_hex(
-            HexStr(shares_item['payload']['sharesData']), operator_count
-        )
+        try:
+            operator_index = validator.operator_ids.index(operator_id)
+        except ValueError as e:
+            raise RuntimeError(f'SSV operator {operator_id} not found in validator') from e
+
+        shares_data = SSVSharesData.from_hex(validator.shares_data, operator_count)
 
         public_key_share = shares_data.public_key_shares[operator_index]
         encrypted_key_share = shares_data.encrypted_key_shares[operator_index]
@@ -204,22 +169,11 @@ class SSVValidatorKeyShares:
         if public_key_share != derived_public_key_share:
             raise RuntimeError('Public key mismatch')
 
-        public_key = shares_item['data']['publicKey']
         return SSVValidatorKeyShares(
             key_share=BLSPrivkey(key_share),
             public_key_share=Web3.to_hex(public_key_share),
-            public_key=public_key,
+            public_key=validator.public_key,
         )
-
-    @staticmethod
-    def get_operator_index(operators_data: list[dict], operator_id: int) -> int:
-        """
-        Gets position of given operator in a list of cluster operators
-        """
-        for operator_index, operator_dict in enumerate(operators_data):
-            if operator_id == operator_dict['id']:
-                return operator_index
-        raise RuntimeError(f'SSV operator id {operator_id} not found in SSV keyshares file')
 
     @staticmethod
     def decrypt_rsa_pkcs1_v1_5(data: bytes, rsa_key: RSA.RsaKey) -> HexBytes:
@@ -313,7 +267,7 @@ class SSVOperator:
         :param ssv_operator_id: SSV Operator id
         :param operator_key: SSV Operator private key
         """
-        logger.info('Checking SSV operator key for operator id %d...', ssv_operator_id)
+        logger.info('Checking SSV operator key for operator %d...', ssv_operator_id)
         try:
             operator_data = await ssv_api.get_operator(ssv_operator_id)
         except Exception as e:
