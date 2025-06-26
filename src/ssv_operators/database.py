@@ -47,8 +47,10 @@ class SSVValidatorCrud(BaseCrud):
 
     async def get_validators(self) -> list[SSVValidator]:
         query = f"""
-            SELECT public_key, operator_ids, shares_data FROM {self.table}
+            SELECT public_key, operator_ids, shares_data
+            FROM {self.table}
             """
+
         res = await self.execute(query)
         validators: list[SSVValidator] = []
         rows = await res.fetchall()

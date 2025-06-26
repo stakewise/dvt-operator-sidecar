@@ -83,6 +83,15 @@ if remote_signer_url and cluster_type != OBOL:
 if cluster_type == OBOL and not obol_cluster_lock_file:
     raise RuntimeError('OBOL_CLUSTER_LOCK_FILE must be set')
 
+# Check SSV operator IDs
+if (
+    not remote_signer_url
+    and cluster_type == SSV
+    and ssv_operator_id is None
+    and not ssv_operator_ids
+):
+    raise RuntimeError('SSV_OPERATOR_ID or SSV_OPERATOR_IDS must be set')
+
 # Check SSV_OPERATOR_KEY_FILE
 if (
     not remote_signer_url
@@ -101,4 +110,28 @@ if (
 ):
     raise RuntimeError(
         'SSV_OPERATOR_PASSWORD_FILE or SSV_OPERATOR_PASSWORD_FILE_TEMPLATE must be set'
+    )
+
+# Check SSV operator key file template when running multiple SSV operators
+if (
+    not remote_signer_url
+    and cluster_type == SSV
+    and ssv_operator_id is None
+    and ssv_operator_ids
+    and not ssv_operator_key_file_template
+):
+    raise RuntimeError(
+        'SSV_OPERATOR_KEY_FILE_TEMPLATE must be set when running multiple SSV operators'
+    )
+
+# Check SSV operator password file template when running multiple SSV operators
+if (
+    not remote_signer_url
+    and cluster_type == SSV
+    and ssv_operator_id is None
+    and ssv_operator_ids
+    and not ssv_operator_password_file_template
+):
+    raise RuntimeError(
+        'SSV_OPERATOR_PASSWORD_FILE_TEMPLATE must be set when running multiple SSV operators'
     )

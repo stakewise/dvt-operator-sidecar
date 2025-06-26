@@ -29,13 +29,22 @@ logger = cast(ExtendedLogger, logging.getLogger(__name__))
 class SSVKeystore(BaseKeystore):
     """
     Similar to LocalKeystore from Stakewise Operator, but:
-    * keys are loaded from keyshares.json file
-    * pubkey_to_share attribute added
+    * keys are loaded from the database
+    * new attributes added:
+    - `ssv_operator_id`: SSV Operator id
+    - `ssv_operator_key`: SSV Operator private key
+    - `pubkey_to_share`: mapping from validator public key to its share public key
     """
 
-    keys: Keys
-
-    def __init__(self, keys: Keys, pubkey_to_share: dict[HexStr, HexStr]):
+    def __init__(
+        self,
+        ssv_operator_id: int,
+        ssv_operator_key: RSA.RsaKey,
+        keys: Keys,
+        pubkey_to_share: dict[HexStr, HexStr],
+    ):
+        self.ssv_operator_id = ssv_operator_id
+        self.ssv_operator_key = ssv_operator_key
         self.keys = keys
         self.pubkey_to_share = pubkey_to_share
 
@@ -62,7 +71,7 @@ class SSVKeystore(BaseKeystore):
         ssv_operator_id: int, ssv_operator_key_file: str, ssv_operator_password_file: str
     ) -> 'SSVKeystore':
         """
-        Loads validator keys from keyshares json file,
+        Loads validator keys from the database,
         filters key shares related to a given operator.
         """
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
@@ -79,7 +88,12 @@ class SSVKeystore(BaseKeystore):
             keys[key_share.public_key_share] = key_share.key_share
             pubkey_to_share[key_share.public_key] = key_share.public_key_share
 
-        return SSVKeystore(keys, pubkey_to_share)
+        return SSVKeystore(
+            ssv_operator_id=ssv_operator_id,
+            ssv_operator_key=operator_key,
+            keys=keys,
+            pubkey_to_share=pubkey_to_share,
+        )
 
     def __bool__(self) -> bool:
         return len(self.keys) > 0
@@ -108,6 +122,32 @@ class SSVKeystore(BaseKeystore):
     @property
     def public_keys(self) -> list[HexStr]:
         return list(self.keys.keys())
+
+    async def update_from_ssv_validators(self, ssv_validators: list[SSVValidator]) -> None:
+        """
+        Updates the keystore with new SSV validators.
+        This method is called when new SSV validators are added to the database.
+        """
+        if not ssv_validators:
+            return
+
+        logger.info(
+            'Updating SSV keystore for operator %d with %d validators',
+            self.ssv_operator_id,
+            len(ssv_validators),
+        )
+
+        for validator in ssv_validators:
+            key_share = SSVValidatorKeyShares.from_validator(
+                validator=validator,
+                operator_id=self.ssv_operator_id,
+                operator_key=self.ssv_operator_key,
+            )
+
+            self.keys[key_share.public_key_share] = key_share.key_share
+            self.pubkey_to_share[key_share.public_key] = key_share.public_key_share
+
+        logger.info('SSV keystore updated')
 
 
 async def load_ssv_key_shares(
