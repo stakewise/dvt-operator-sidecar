@@ -168,3 +168,4 @@ cython_debug/
 # Miscellaneous
 .DS_Store
 *.env
+*.db

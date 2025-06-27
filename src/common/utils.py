@@ -8,23 +8,19 @@ from hexbytes import HexBytes
 
 
 @overload
-def to_chunks(items: list, size: int) -> Iterator[list]:
-    ...
+def to_chunks(items: list, size: int) -> Iterator[list]: ...
 
 
 @overload
-def to_chunks(items: range, size: int) -> Iterator[range]:
-    ...
+def to_chunks(items: range, size: int) -> Iterator[range]: ...
 
 
 @overload
-def to_chunks(items: HexBytes, size: int) -> Iterator[HexBytes]:
-    ...
+def to_chunks(items: HexBytes, size: int) -> Iterator[HexBytes]: ...
 
 
 @overload
-def to_chunks(items: bytes, size: int) -> Iterator[bytes]:
-    ...
+def to_chunks(items: bytes, size: int) -> Iterator[bytes]: ...
 
 
 def to_chunks(items, size):  # type: ignore[no-untyped-def]
@@ -50,3 +46,8 @@ def get_project_meta() -> dict:
 
 def get_project_version() -> str:
     return get_project_meta()['tool']['poetry']['version']
+
+
+def get_project_db_version() -> int:
+    db_version = get_project_meta()['tool']['migration']['db_version']
+    return int(db_version)
