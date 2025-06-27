@@ -18,7 +18,7 @@ async def setup_test_database():
 @pytest.fixture()
 async def test_db():
     # use in-memory DB
-    with mock.patch('src.common.database.DATABASE', ':memory:'):
+    with mock.patch('src.config.settings.database', ':memory:'):
         await setup_test_database()
         try:
             yield
