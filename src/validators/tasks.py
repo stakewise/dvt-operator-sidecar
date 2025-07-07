@@ -65,6 +65,9 @@ async def ssv_create_tasks() -> None:
     logger.info('Loading SSV keystores')
     keystores_map = cast(dict[int, SSVKeystore], await get_keystores_map())
 
+    logger.info('Starting initial sync of SSV validators')
+    await SSVValidatorTask(keystores_map=keystores_map).process_block()
+
     logger.info('Starting SSV validator sync task')
     asyncio.create_task(SSVValidatorTask(keystores_map=keystores_map).run())
 

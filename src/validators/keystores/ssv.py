@@ -260,11 +260,6 @@ class SSVOperator:
         See key file example in SSV docs:
         https://docs.ssv.network/operator-user-guides/operator-node/installation
         """
-        if not settings.ssv_operator_key_file:
-            raise RuntimeError('SSV_OPERATOR_KEY_FILE must be set')
-        if not settings.ssv_operator_password_file:
-            raise RuntimeError('SSV_OPERATOR_PASSWORD_FILE must be set')
-
         logger.info('Loading operator key from %s', operator_key_path)
 
         with open(operator_key_path, encoding='utf-8') as f:
