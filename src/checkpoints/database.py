@@ -21,9 +21,6 @@ class CheckpointCrud(BaseCrud):
     ) -> None:
         return await self._update_checkpoint_value(checkpoint_type, block_number)
 
-    async def update_checkpoint_epoch(self, checkpoint_type: str, epoch: int) -> None:
-        return await self._update_checkpoint_value(checkpoint_type, epoch)
-
     async def _get_checkpoint_value(self, checkpoint_type: str) -> int | None:
         """Fetch last value for checkpoint type"""
         cur = await self.execute(

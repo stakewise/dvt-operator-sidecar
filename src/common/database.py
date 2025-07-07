@@ -60,9 +60,6 @@ class BaseCrud:
         if not connection:
             self.autocommit = True
 
-    async def drop(self) -> None:
-        await self.execute(f'DROP TABLE IF EXISTS {self.table}')
-
     async def setup(self) -> None:
         raise NotImplementedError
 

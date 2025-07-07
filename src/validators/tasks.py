@@ -113,16 +113,6 @@ def get_obol_node_indexes() -> list[int]:
     raise RuntimeError('OBOL_NODE_INDEXES or OBOL_NODE_INDEX must be set')
 
 
-def get_ssv_operator_ids() -> list[int]:
-    if settings.ssv_operator_ids:
-        return settings.ssv_operator_ids
-
-    if settings.ssv_operator_id is not None:
-        return [settings.ssv_operator_id]
-
-    raise RuntimeError('SSV_OPERATOR_IDS or SSV_OPERATOR_ID must be set')
-
-
 # pylint: disable=redefined-builtin
 async def poll_exits_and_push_signatures(keystore: BaseKeystore, share_index: int) -> None:
     async with aiohttp.ClientSession(timeout=ClientTimeout(settings.relayer_timeout)) as session:

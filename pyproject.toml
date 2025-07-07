@@ -70,9 +70,10 @@ extend-ignore = [
     "E501",  # line length will be checked by pylint
     "E701",  # multiple statements on one line (colon), conflicts with black
 ]
+exclude = ["src/_vulture_whitelist.py"]
 
 [tool.mypy]
-exclude = ["test"]
+exclude = ["test", "_vulture_whitelist.py"]
 ignore_missing_imports = true
 python_version = "3.10"
 disallow_untyped_defs = true
@@ -112,7 +113,6 @@ fail_under = 73
 
 [tool.vulture]
 exclude = ["*/test*", "conftest.py", "networks.py"]
-min_confidence = 80
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
