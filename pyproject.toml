@@ -57,7 +57,7 @@ disable = [
     "W0718",   # broad-exception-caught
     "C0321"   # More than one statement on a single line
 ]
-ignore-paths=["src/.*/tests/.*", "src/test_fixtures/.*"]
+ignore-paths=["src/.*/tests/.*", "src/test_fixtures/.*", "src/_vulture_whitelist.py"]
 ignore=["conftest.py"]
 
 [tool.pylint."BASIC"]
