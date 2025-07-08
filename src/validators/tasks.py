@@ -5,12 +5,20 @@ from typing import cast
 
 import aiohttp
 from aiohttp import ClientError, ClientTimeout
-from eth_typing import HexStr
+from eth_typing import BlockNumber, HexStr
+from sw_utils import get_chain_finalized_head
 from web3 import Web3
 
+from src.checkpoints.database import CheckpointCrud, CheckpointType
+from src.common.clients import consensus_client, execution_client
+from src.common.contracts import ssv_registry_contract
+from src.common.database import TransactionConnection
 from src.common.setup_logging import ExtendedLogger
+from src.common.tasks import BaseTask
 from src.config import settings
 from src.config.settings import OBOL, SSV
+from src.ssv_operators.database import SSVValidatorCrud
+from src.ssv_operators.typings import SSVValidator
 from src.validators import relayer
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.load import load_keystore
@@ -45,7 +53,7 @@ async def obol_create_tasks() -> None:
             )
             keystore = await ObolKeystore.load_from_dir(obol_keystores_dir, node_index)
 
-        logger.info('Starting task for node index %s', node_index)
+        logger.info('Starting exit signatures task for node index %s', node_index)
 
         share_index = node_index + 1
         asyncio.create_task(
@@ -54,31 +62,48 @@ async def obol_create_tasks() -> None:
 
 
 async def ssv_create_tasks() -> None:
-    ssv_operator_ids = get_ssv_operator_ids()
+    logger.info('Loading SSV keystores')
+    keystores_map = cast(dict[int, SSVKeystore], await get_keystores_map())
 
-    # keystore is a mapping private-key-share -> public-key-share
-    # Testing setup: multiple keystores
-    # Production setup: single keystore
-    keystore: BaseKeystore | None = None
-    if not settings.ssv_operator_key_file_template:
+    logger.info('Starting initial sync of SSV validators')
+    await SSVValidatorTask(keystores_map=keystores_map).process_block()
+
+    logger.info('Starting SSV validator sync task')
+    asyncio.create_task(SSVValidatorTask(keystores_map=keystores_map).run())
+
+    for ssv_operator_id, keystore in keystores_map.items():
+        logger.info('Starting exit signatures task for operator %s', ssv_operator_id)
+
+        asyncio.create_task(poll_exits_and_push_signatures(keystore, ssv_operator_id))
+
+
+async def get_keystores_map() -> dict[int, BaseKeystore]:
+    """
+    Returns a mapping of SSV operator IDs to their keystores.
+    Keystore is a mapping from private-key-share to public-key-share.
+    Testing setup: multiple keystores.
+    Production setup: single keystore.
+    """
+
+    keystores_map: dict[int, BaseKeystore] = {}
+
+    if settings.ssv_operator_id:
         keystore = await load_keystore()
+        return {settings.ssv_operator_id: keystore}
 
-    for ssv_operator_id in ssv_operator_ids:
-        if settings.ssv_operator_key_file_template:
-            ssv_operator_key_file = settings.ssv_operator_key_file_template.format(
-                operator_id=ssv_operator_id
-            )
-            ssv_operator_password_file = settings.ssv_operator_password_file_template.format(
-                operator_id=ssv_operator_id
-            )
-            keystore = await SSVKeystore.load_as_operator(
-                ssv_operator_id, ssv_operator_key_file, ssv_operator_password_file
-            )
-
-        logger.info('Starting task for operator id %s', ssv_operator_id)
-        asyncio.create_task(
-            poll_exits_and_push_signatures(cast(BaseKeystore, keystore), ssv_operator_id)
+    for ssv_operator_id in settings.ssv_operator_ids:
+        ssv_operator_key_file = settings.ssv_operator_key_file_template.format(
+            operator_id=ssv_operator_id
         )
+        ssv_operator_password_file = settings.ssv_operator_password_file_template.format(
+            operator_id=ssv_operator_id
+        )
+        keystore = await SSVKeystore.load_as_operator(
+            ssv_operator_id, ssv_operator_key_file, ssv_operator_password_file
+        )
+        keystores_map[ssv_operator_id] = keystore
+
+    return keystores_map
 
 
 def get_obol_node_indexes() -> list[int]:
@@ -89,16 +114,6 @@ def get_obol_node_indexes() -> list[int]:
         return [settings.obol_node_index]
 
     raise RuntimeError('OBOL_NODE_INDEXES or OBOL_NODE_INDEX must be set')
-
-
-def get_ssv_operator_ids() -> list[int]:
-    if settings.ssv_operator_ids:
-        return settings.ssv_operator_ids
-
-    if settings.ssv_operator_id is not None:
-        return [settings.ssv_operator_id]
-
-    raise RuntimeError('SSV_OPERATOR_IDS or SSV_OPERATOR_ID must be set')
 
 
 # pylint: disable=redefined-builtin
@@ -154,3 +169,111 @@ async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
             logger.error_verbose('Failed to get validator exits: %s', e)
 
         await asyncio.sleep(settings.poll_interval)
+
+
+class SSVValidatorTask(BaseTask):
+    """
+    Task to scan SSV validators from onchain events.
+    """
+
+    def __init__(self, keystores_map: dict[int, SSVKeystore]) -> None:
+        self.keystores_map = keystores_map
+
+    @property
+    def ssv_operator_ids(self) -> list[int]:
+        return list(self.keystores_map.keys())
+
+    async def process_block(self) -> None:
+        chain_head = await get_chain_finalized_head(
+            consensus_client=consensus_client,
+            slots_per_epoch=settings.network_config.SLOTS_PER_EPOCH,
+        )
+        to_block = chain_head.block_number
+
+        from_block = await self._get_from_block()
+
+        if from_block > to_block:
+            return
+
+        # Fetch events
+        events = await ssv_registry_contract.get_validator_added_events(
+            from_block=from_block, to_block=to_block
+        )
+        ssv_validators: list[SSVValidator] = []
+        ssv_operator_ids_set = set(self.ssv_operator_ids)
+
+        # Build SSV validators from events
+        for event in events:
+            event_operator_ids_set = set(event['args']['operatorIds'])
+
+            if not ssv_operator_ids_set.issubset(event_operator_ids_set):
+                continue
+
+            ssv_validators.append(SSVValidator.from_event_data(event))
+
+        # Save SSV validators to the database
+        async with TransactionConnection() as conn:
+            if ssv_validators:
+                logger.info('Saving %d SSV validators', len(ssv_validators))
+                await SSVValidatorCrud(conn).save_validators(ssv_validators)
+
+            await CheckpointCrud(conn).update_checkpoint_block_number(
+                checkpoint_type=CheckpointType.SSV_VALIDATOR_ADDED,
+                block_number=to_block,
+            )
+
+        # Update the keystores with new SSV validators
+        for keystore in self.keystores_map.values():
+            await keystore.update_from_ssv_validators(
+                ssv_validators=ssv_validators,
+            )
+
+    async def _get_from_block(self) -> BlockNumber:
+        checkpoint_block = await CheckpointCrud().get_checkpoint_block_number(
+            checkpoint_type=CheckpointType.SSV_VALIDATOR_ADDED
+        )
+        if checkpoint_block is not None:
+            return BlockNumber(checkpoint_block + 1)
+
+        cluster_genesis_block = await _get_ssv_cluster_genesis_block(
+            ssv_operator_ids=self.ssv_operator_ids, to_block=await execution_client.eth.block_number
+        )
+        if cluster_genesis_block is None:
+            raise RuntimeError('SSV cluster genesis block not found')
+
+        return cluster_genesis_block
+
+
+async def _get_ssv_cluster_genesis_block(
+    ssv_operator_ids: list[int], to_block: BlockNumber
+) -> BlockNumber | None:
+    """
+    Returns the first block at which all of the cluster operators existed
+    """
+    if not ssv_operator_ids:
+        return None
+
+    # Get genesis blocks for all SSV operators
+    genesis_blocks = await asyncio.gather(
+        *[
+            _get_ssv_operator_genesis_block(ssv_operator_id, to_block)
+            for ssv_operator_id in ssv_operator_ids
+        ]
+    )
+
+    return max(genesis_blocks)
+
+
+async def _get_ssv_operator_genesis_block(
+    ssv_operator_id: int, to_block: BlockNumber | None
+) -> BlockNumber:
+    event = await ssv_registry_contract.get_last_operator_added_event(
+        operator_id=ssv_operator_id, to_block=to_block
+    )
+    if event is None:
+        raise RuntimeError(f'Genesis block for SSV operator {ssv_operator_id} not found')
+
+    genesis_block = BlockNumber(event['blockNumber'])
+    logger.info('Found genesis block %s for SSV operator %s', genesis_block, ssv_operator_id)
+
+    return genesis_block

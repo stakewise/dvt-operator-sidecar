@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dvt-operator-sidecar"
-version = "v0.5.0"
+version = "v1.0.0"
 description = "StakeWise sidecar for DVT-operator"
 authors = ["StakeWise Labs <info@stakewise.io>"]
 package-mode = false
@@ -17,17 +17,18 @@ pyyaml = "==6.0.1"
 python-json-logger = "==2.0.7"
 staking-deposit = { git = "https://github.com/ethereum/staking-deposit-cli.git", rev = "v2.4.0" }
 pycryptodomex = "3.19.1"
+aiosqlite = "==0.21.0"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "==3.0.1"
 mypy = "==1.6.1"
 isort = "==5.12.0"
-pytest = "==7.4.2"
-pytest-asyncio = "==0.21.1"
+pytest = "==8.4.1"
+pytest-asyncio = "==1.0.0"
 pre-commit = "==3.5.0"
 Flake8-pyproject = "==1.2.3"
 bandit = { version = "==1.7.5", extras = ["toml"] }
-black = { version = "==23.10.0", extras = ["d"] }
+black = { version = "==25.1.0", extras = ["d"] }
 faker = "==19.11.0"
 flake8-print = "==5.0.0"
 flake8-datetimez = "==20.10.0"
@@ -53,9 +54,10 @@ disable = [
     "R0801",  # duplicate-code
     "R0903",  # too-few-public-methods
     "W0703",  # broad-except
-    "W0718"   # broad-exception-caught
+    "W0718",   # broad-exception-caught
+    "C0321"   # More than one statement on a single line
 ]
-ignore-paths=["src/.*/tests/.*", "src/test_fixtures/.*"]
+ignore-paths=["src/.*/tests/.*", "src/test_fixtures/.*", "src/_vulture_whitelist.py"]
 ignore=["conftest.py"]
 
 [tool.pylint."BASIC"]
@@ -65,11 +67,13 @@ ignored-modules=["milagro_bls_binding"]
 [tool.flake8]
 extend-ignore = [
     "E203",  # Whitespace before ':', conflicts with black
-    "E501"  # line length will be checked by pylint
+    "E501",  # line length will be checked by pylint
+    "E701",  # multiple statements on one line (colon), conflicts with black
 ]
+exclude = ["src/_vulture_whitelist.py"]
 
 [tool.mypy]
-exclude = ["test_"]
+exclude = ["test", "_vulture_whitelist.py"]
 ignore_missing_imports = true
 python_version = "3.10"
 disallow_untyped_defs = true
@@ -109,4 +113,9 @@ fail_under = 73
 
 [tool.vulture]
 exclude = ["*/test*", "conftest.py", "networks.py"]
-min_confidence = 80
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.migration]
+db_version = 1

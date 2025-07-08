@@ -57,7 +57,7 @@ repos:
         language: system
         types: [ python ]
         require_serial: true
-        exclude: "test_"
+        exclude: "test|_vulture_whitelist.py"
 
   - repo: local
     hooks:
@@ -84,7 +84,7 @@ repos:
         always_run: true
 
   - repo: https://github.com/jendrikseipp/vulture
-    rev: 'v2.13'
+    rev: 'v2.14'
     hooks:
       - id: vulture
         args: ["src/"]
