@@ -34,7 +34,7 @@ class SSVValidatorCrud(BaseCrud):
     @autocommit
     async def save_validators(self, validators: list[SSVValidator]) -> None:
         await self.executemany(
-            f'INSERT INTO {self.table} ' 'VALUES (:public_key, :operator_ids, :shares_data)',
+            f'INSERT INTO {self.table} VALUES (:public_key, :operator_ids, :shares_data)',
             [
                 {
                     'public_key': validator.public_key,
