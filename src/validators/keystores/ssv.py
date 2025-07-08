@@ -11,11 +11,10 @@ from Cryptodome.Random import get_random_bytes
 from eth_account import Account
 from eth_typing import BLSSignature, HexStr
 from hexbytes import HexBytes
-from sw_utils import ConsensusFork, get_exit_message_signing_root
+from sw_utils import ConsensusFork, chunkify, get_exit_message_signing_root
 from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
-from src.common.utils import to_chunks
 from src.config import settings
 from src.ssv_operators.database import SSVValidatorCrud
 from src.ssv_operators.typings import SSVValidator
@@ -345,9 +344,9 @@ class SSVSharesData:
         if len(data) != shares_expected_length:
             raise RuntimeError('Unexpected shares data length')
 
-        public_key_shares = to_chunks(data[signature_offset:pub_keys_offset], public_key_length)
+        public_key_shares = chunkify(data[signature_offset:pub_keys_offset], public_key_length)
 
-        encrypted_key_shares = to_chunks(data[pub_keys_offset:], encrypted_key_length)
+        encrypted_key_shares = chunkify(data[pub_keys_offset:], encrypted_key_length)
 
         return SSVSharesData(
             public_key_shares=list(public_key_shares),
