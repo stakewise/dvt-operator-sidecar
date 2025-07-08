@@ -235,7 +235,7 @@ class SSVValidatorTask(BaseTask):
         if checkpoint_block is not None:
             return BlockNumber(checkpoint_block + 1)
 
-        cluster_genesis_block = await get_ssv_cluster_genesis_block(
+        cluster_genesis_block = await _get_ssv_cluster_genesis_block(
             ssv_operator_ids=self.ssv_operator_ids, to_block=await execution_client.eth.block_number
         )
         if cluster_genesis_block is None:
@@ -244,7 +244,7 @@ class SSVValidatorTask(BaseTask):
         return cluster_genesis_block
 
 
-async def get_ssv_cluster_genesis_block(
+async def _get_ssv_cluster_genesis_block(
     ssv_operator_ids: list[int], to_block: BlockNumber
 ) -> BlockNumber | None:
     """
@@ -256,7 +256,7 @@ async def get_ssv_cluster_genesis_block(
     # Get genesis blocks for all SSV operators
     genesis_blocks = await asyncio.gather(
         *[
-            get_ssv_operator_genesis_block(ssv_operator_id, to_block)
+            _get_ssv_operator_genesis_block(ssv_operator_id, to_block)
             for ssv_operator_id in ssv_operator_ids
         ]
     )
@@ -264,7 +264,7 @@ async def get_ssv_cluster_genesis_block(
     return max(genesis_blocks)
 
 
-async def get_ssv_operator_genesis_block(
+async def _get_ssv_operator_genesis_block(
     ssv_operator_id: int, to_block: BlockNumber | None
 ) -> BlockNumber:
     event = await ssv_registry_contract.get_last_operator_added_event(
