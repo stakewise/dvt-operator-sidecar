@@ -17,7 +17,7 @@ from src.common.setup_logging import ExtendedLogger
 from src.common.tasks import BaseTask
 from src.config import settings
 from src.config.settings import OBOL, SSV
-from src.ssv_operators.database import SSVOperatorCrud, SSVValidatorCrud
+from src.ssv_operators.database import SSVValidatorCrud
 from src.ssv_operators.typings import SSVValidator
 from src.validators import relayer
 from src.validators.keystores.base import BaseKeystore
@@ -267,31 +267,13 @@ async def get_ssv_cluster_genesis_block(
 async def get_ssv_operator_genesis_block(
     ssv_operator_id: int, to_block: BlockNumber | None
 ) -> BlockNumber:
-    genesis_block = await SSVOperatorCrud().get_genesis_block(ssv_operator_id)
-
-    if genesis_block is not None:
-        return genesis_block
-
-    logger.info(
-        'Genesis block for SSV operator %s not found in database, fetching from contract',
-        ssv_operator_id,
-    )
-    genesis_block = await fetch_ssv_operator_genesis_block(
-        ssv_operator_id=ssv_operator_id, to_block=to_block
-    )
-    if genesis_block is None:
-        raise RuntimeError(f'Genesis block for SSV operator {ssv_operator_id} not found')
-
-    logger.info('Saving genesis block %s for SSV operator %s', genesis_block, ssv_operator_id)
-    await SSVOperatorCrud().set_genesis_block(ssv_operator_id, genesis_block)
-
-    return genesis_block
-
-
-async def fetch_ssv_operator_genesis_block(
-    ssv_operator_id: int, to_block: BlockNumber | None
-) -> BlockNumber | None:
     event = await ssv_registry_contract.get_last_operator_added_event(
         operator_id=ssv_operator_id, to_block=to_block
     )
-    return BlockNumber(event['blockNumber']) if event else None
+    if event is None:
+        raise RuntimeError(f'Genesis block for SSV operator {ssv_operator_id} not found')
+
+    genesis_block = BlockNumber(event['blockNumber'])
+    logger.info('Found genesis block %s for SSV operator %s', genesis_block, ssv_operator_id)
+
+    return genesis_block

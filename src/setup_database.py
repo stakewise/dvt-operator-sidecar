@@ -6,7 +6,7 @@ from src.checkpoints.database import CheckpointCrud
 from src.common.database import db_client
 from src.common.utils import get_project_db_version
 from src.db_version.database import DatabaseVersionCrud
-from src.ssv_operators.database import SSVOperatorCrud, SSVValidatorCrud
+from src.ssv_operators.database import SSVValidatorCrud
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 # Every crud except DatabaseVersionCrud
 crud_cls_list = [
     CheckpointCrud,
-    SSVOperatorCrud,
     SSVValidatorCrud,
 ]
 
