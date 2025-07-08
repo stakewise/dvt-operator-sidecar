@@ -5,6 +5,7 @@ from typing import cast
 from src.common.database import db_client
 from src.common.setup_logging import ExtendedLogger, setup_logging, setup_sentry
 from src.common.utils import get_project_version
+from src.config.settings import validate_settings
 from src.setup_database import setup_database
 
 setup_logging()
@@ -18,6 +19,8 @@ async def app() -> None:
     # pylint: disable=import-outside-toplevel
     from src.startup_checks import startup_checks
     from src.validators.tasks import create_tasks
+
+    validate_settings()
 
     version = get_project_version()
     logger.info('Starting DVT Sidecar service %s', version)
