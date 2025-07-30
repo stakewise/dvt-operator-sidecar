@@ -33,8 +33,13 @@ class SSVValidatorCrud(BaseCrud):
 
     @autocommit
     async def save_validators(self, validators: list[SSVValidator]) -> None:
+        # It is possible that the same validator is added multiple times,
+        # (removed and then added again).
+        # So we use ON CONFLICT to update existing records.
         await self.executemany(
-            f'INSERT INTO {self.table} VALUES (:public_key, :operator_ids, :shares_data)',
+            f'INSERT INTO {self.table} VALUES (:public_key, :operator_ids, :shares_data) '
+            f'ON CONFLICT (public_key) DO UPDATE '
+            f'SET operator_ids = :operator_ids, shares_data = :shares_data',
             [
                 {
                     'public_key': validator.public_key,
