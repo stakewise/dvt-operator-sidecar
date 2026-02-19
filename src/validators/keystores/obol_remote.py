@@ -15,6 +15,7 @@ from web3 import Web3
 from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.validators.keystores.base import BaseKeystore
+from src.validators.typings import ValidatorType
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -112,6 +113,11 @@ class ObolRemoteKeystore(BaseKeystore):
 
         bls.Verify(BLSPubkey(Web3.to_bytes(hexstr=public_key)), message, exit_signature)
         return exit_signature
+
+    async def get_deposit_signature(
+        self, public_key: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
+    ) -> BLSSignature:
+        raise NotImplementedError('Deposit signing is not supported for remote signer')
 
     @staticmethod
     async def _get_remote_signer_public_keys() -> list[HexStr]:

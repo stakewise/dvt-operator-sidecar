@@ -3,6 +3,8 @@ import abc
 from eth_typing import BLSSignature, HexStr
 from sw_utils.typings import ConsensusFork
 
+from src.validators.typings import ValidatorType
+
 
 class BaseKeystore(abc.ABC):
     pubkey_to_share: dict[HexStr, HexStr]
@@ -27,6 +29,12 @@ class BaseKeystore(abc.ABC):
     @abc.abstractmethod
     async def get_exit_signature(
         self, validator_index: int, public_key: HexStr, fork: ConsensusFork | None = None
+    ) -> BLSSignature:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_deposit_signature(
+        self, public_key: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
     ) -> BLSSignature:
         raise NotImplementedError
 

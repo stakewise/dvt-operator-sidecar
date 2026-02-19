@@ -12,6 +12,11 @@ from eth_account import Account
 from eth_typing import BLSSignature, HexStr
 from hexbytes import HexBytes
 from sw_utils import ConsensusFork, chunkify, get_exit_message_signing_root
+from sw_utils.signing import (
+    DepositMessage,
+    compute_deposit_domain,
+    compute_signing_root,
+)
 from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
@@ -21,6 +26,7 @@ from src.ssv_operators.typings import SSVValidator
 from src.validators.keystores import ssv_api
 from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
+from src.validators.typings import ValidatorType, get_withdrawal_credentials
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -117,6 +123,20 @@ class SSVKeystore(BaseKeystore):
         )
 
         return bls.Sign(private_key, message)
+
+    async def get_deposit_signature(
+        self, public_key: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
+    ) -> BLSSignature:
+        private_key = self.keys[public_key]
+        withdrawal_credentials = get_withdrawal_credentials(vault, validator_type)
+        domain = compute_deposit_domain(settings.network_config.GENESIS_FORK_VERSION)
+        deposit_message = DepositMessage(
+            pubkey=Web3.to_bytes(hexstr=public_key),
+            withdrawal_credentials=withdrawal_credentials,
+            amount=amount,
+        )
+        signing_root = compute_signing_root(deposit_message, domain)
+        return bls.Sign(private_key, signing_root)
 
     @property
     def public_keys(self) -> list[HexStr]:
