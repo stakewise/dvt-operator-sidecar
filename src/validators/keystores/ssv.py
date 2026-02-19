@@ -22,7 +22,6 @@ from src.validators.keystores import ssv_api
 from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
 from src.validators.keystores.typings import BLSPrivkey, Keys
 
-
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 

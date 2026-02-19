@@ -15,7 +15,6 @@ from src.config import settings
 from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
 from src.validators.keystores.exceptions import KeystoreException
 from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
-from src.validators.typings import get_withdrawal_credentials
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 

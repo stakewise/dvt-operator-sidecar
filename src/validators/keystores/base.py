@@ -3,7 +3,11 @@ import abc
 import milagro_bls_binding as bls
 from eth_typing import BLSSignature, HexStr
 from sw_utils import ConsensusFork, get_exit_message_signing_root
-from sw_utils.signing import DepositMessage, compute_deposit_domain, compute_signing_root
+from sw_utils.signing import (
+    DepositMessage,
+    compute_deposit_domain,
+    compute_signing_root,
+)
 from web3 import Web3
 
 from src.config import settings
