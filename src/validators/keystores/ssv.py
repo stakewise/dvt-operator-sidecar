@@ -9,14 +9,9 @@ from Cryptodome.Cipher import PKCS1_v1_5
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Random import get_random_bytes
 from eth_account import Account
-from eth_typing import BLSSignature, HexStr
+from eth_typing import HexStr
 from hexbytes import HexBytes
-from sw_utils import ConsensusFork, chunkify, get_exit_message_signing_root
-from sw_utils.signing import (
-    DepositMessage,
-    compute_deposit_domain,
-    compute_signing_root,
-)
+from sw_utils import chunkify
 from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
@@ -24,14 +19,14 @@ from src.config import settings
 from src.ssv_operators.database import SSVValidatorCrud
 from src.ssv_operators.typings import SSVValidator
 from src.validators.keystores import ssv_api
-from src.validators.keystores.base import BaseKeystore
+from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
 from src.validators.keystores.typings import BLSPrivkey, Keys
-from src.validators.typings import ValidatorType, get_withdrawal_credentials
+
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-class SSVKeystore(BaseKeystore):
+class SSVKeystore(LocalKeystoreMixin, BaseKeystore):
     """
     Similar to LocalKeystore from Stakewise Operator, but:
     * keys are loaded from the database
@@ -52,6 +47,7 @@ class SSVKeystore(BaseKeystore):
         self.ssv_operator_key = ssv_operator_key
         self.keys = keys
         self.pubkey_to_share = pubkey_to_share
+        self.share_to_pubkey = {v: k for k, v in pubkey_to_share.items()}
 
     @staticmethod
     async def load() -> 'SSVKeystore':
@@ -79,16 +75,22 @@ class SSVKeystore(BaseKeystore):
         Loads validator keys from the database,
         filters key shares related to a given operator.
         """
+        # Load operator key from keystore
         operator_key = SSVOperator.load_key(ssv_operator_key_file, ssv_operator_password_file)
         await SSVOperator.check_operator_key(ssv_operator_id, operator_key)
 
+        # Load key shares from DB, filter by operator_id and decrypt them with operator key
         key_shares = await load_ssv_key_shares(
             ssv_operator_id,
             operator_key,
         )
+        # public key share -> private key share mapping
         keys = Keys({})
+
+        # public_key -> public_key_share mapping
         pubkey_to_share: dict[HexStr, HexStr] = {}
 
+        # Fill mappings
         for key_share in key_shares:
             keys[key_share.public_key_share] = key_share.key_share
             pubkey_to_share[key_share.public_key] = key_share.public_key_share
@@ -103,40 +105,11 @@ class SSVKeystore(BaseKeystore):
     def __bool__(self) -> bool:
         return len(self.keys) > 0
 
-    def __contains__(self, public_key: HexStr) -> bool:
-        return public_key in self.keys
+    def __contains__(self, public_key_share: HexStr) -> bool:
+        return public_key_share in self.keys
 
     def __len__(self) -> int:
         return len(self.keys)
-
-    async def get_exit_signature(
-        self, validator_index: int, public_key: HexStr, fork: ConsensusFork | None = None
-    ) -> BLSSignature:
-        private_key = self.keys[public_key]
-        fork = fork or settings.network_config.SHAPELLA_FORK
-        genesis_validators_root = settings.network_config.GENESIS_VALIDATORS_ROOT
-
-        message = get_exit_message_signing_root(
-            validator_index=validator_index,
-            genesis_validators_root=genesis_validators_root,
-            fork=fork,
-        )
-
-        return bls.Sign(private_key, message)
-
-    async def get_deposit_signature(
-        self, public_key: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
-    ) -> BLSSignature:
-        private_key = self.keys[public_key]
-        withdrawal_credentials = get_withdrawal_credentials(vault, validator_type)
-        domain = compute_deposit_domain(settings.network_config.GENESIS_FORK_VERSION)
-        deposit_message = DepositMessage(
-            pubkey=Web3.to_bytes(hexstr=public_key),
-            withdrawal_credentials=withdrawal_credentials,
-            amount=amount,
-        )
-        signing_root = compute_signing_root(deposit_message, domain)
-        return bls.Sign(private_key, signing_root)
 
     @property
     def public_keys(self) -> list[HexStr]:
@@ -165,6 +138,7 @@ class SSVKeystore(BaseKeystore):
 
             self.keys[key_share.public_key_share] = key_share.key_share
             self.pubkey_to_share[key_share.public_key] = key_share.public_key_share
+            self.share_to_pubkey[key_share.public_key_share] = key_share.public_key
 
         logger.info('SSV keystore updated')
 

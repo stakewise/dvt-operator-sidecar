@@ -6,27 +6,21 @@ from pathlib import Path
 from typing import cast
 
 import milagro_bls_binding as bls
-from eth_typing import BLSSignature, HexStr
+from eth_typing import HexStr
 from staking_deposit.key_handling.keystore import ScryptKeystore
-from sw_utils import ConsensusFork, get_exit_message_signing_root
-from sw_utils.signing import (
-    DepositMessage,
-    compute_deposit_domain,
-    compute_signing_root,
-)
 from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
 from src.config import settings
-from src.validators.keystores.base import BaseKeystore
+from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
 from src.validators.keystores.exceptions import KeystoreException
 from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
-from src.validators.typings import ValidatorType, get_withdrawal_credentials
+from src.validators.typings import get_withdrawal_credentials
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-class ObolKeystore(BaseKeystore):
+class ObolKeystore(LocalKeystoreMixin, BaseKeystore):
     """
     Similar to LocalKeystore from Stakewise Operator.
     Also pubkey_to_share attribute is filled using cluster lock file.
@@ -37,6 +31,7 @@ class ObolKeystore(BaseKeystore):
     def __init__(self, keys: Keys, pubkey_to_share: dict[HexStr, HexStr]):
         self.keys = keys
         self.pubkey_to_share = pubkey_to_share
+        self.share_to_pubkey = {v: k for k, v in pubkey_to_share.items()}
 
     @staticmethod
     async def load() -> 'ObolKeystore':
@@ -88,35 +83,6 @@ class ObolKeystore(BaseKeystore):
 
     def __len__(self) -> int:
         return len(self.keys)
-
-    async def get_exit_signature(
-        self, validator_index: int, public_key: HexStr, fork: ConsensusFork | None = None
-    ) -> BLSSignature:
-        private_key = self.keys[public_key]
-        fork = fork or settings.network_config.SHAPELLA_FORK
-        genesis_validators_root = settings.network_config.GENESIS_VALIDATORS_ROOT
-
-        message = get_exit_message_signing_root(
-            validator_index=validator_index,
-            genesis_validators_root=genesis_validators_root,
-            fork=fork,
-        )
-
-        return bls.Sign(private_key, message)
-
-    async def get_deposit_signature(
-        self, public_key: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
-    ) -> BLSSignature:
-        private_key = self.keys[public_key]
-        withdrawal_credentials = get_withdrawal_credentials(vault, validator_type)
-        domain = compute_deposit_domain(settings.network_config.GENESIS_FORK_VERSION)
-        deposit_message = DepositMessage(
-            pubkey=Web3.to_bytes(hexstr=public_key),
-            withdrawal_credentials=withdrawal_credentials,
-            amount=amount,
-        )
-        signing_root = compute_signing_root(deposit_message, domain)
-        return bls.Sign(private_key, signing_root)
 
     @property
     def public_keys(self) -> list[HexStr]:

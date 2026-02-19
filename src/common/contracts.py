@@ -63,8 +63,8 @@ class ContractWrapper:
                 cur_to_block,
             )
             events = await event.get_logs(
-                fromBlock=BlockNumber(cur_from_block),
-                toBlock=BlockNumber(cur_to_block),
+                from_block=BlockNumber(cur_from_block),
+                to_block=BlockNumber(cur_to_block),
                 argument_filters=argument_filters,
             )
             if events:
@@ -92,8 +92,8 @@ class ContractWrapper:
                 cur_to_block,
             )
             range_events = await event.get_logs(
-                fromBlock=BlockNumber(cur_from_block),
-                toBlock=BlockNumber(cur_to_block),
+                from_block=BlockNumber(cur_from_block),
+                to_block=BlockNumber(cur_to_block),
                 argument_filters=argument_filters,
             )
             if range_events:

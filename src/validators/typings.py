@@ -1,7 +1,10 @@
 from enum import Enum
 
 from eth_typing import HexAddress, HexStr
-from sw_utils.signing import get_v1_withdrawal_credentials, get_v2_withdrawal_credentials
+from sw_utils.signing import (
+    get_v1_withdrawal_credentials,
+    get_v2_withdrawal_credentials,
+)
 from sw_utils.typings import Bytes32
 
 
