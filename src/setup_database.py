@@ -22,7 +22,7 @@ async def setup_database() -> None:
     migrations = {
         1: migrate_to_version_1,
     }
-    conn = await db_client.get_db_connection()
+    conn = await db_client.get_db_connection(check_same_thread=False)
 
     # Disable transaction control in sqlite3 module.
     # Manage transactions manually.

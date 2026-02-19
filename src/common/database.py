@@ -10,10 +10,12 @@ class Database:
     def __init__(self) -> None:
         self._conn: aiosqlite.Connection | None = None
 
-    async def get_db_connection(self) -> aiosqlite.Connection:
+    async def get_db_connection(self, check_same_thread: bool = True) -> aiosqlite.Connection:
         if not self._conn:
             self._conn = await aiosqlite.connect(
-                settings.database, detect_types=sqlite3.PARSE_COLNAMES
+                settings.database,
+                detect_types=sqlite3.PARSE_COLNAMES,
+                check_same_thread=check_same_thread,
             )
         return self._conn
 
