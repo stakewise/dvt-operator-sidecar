@@ -1437,13 +1437,13 @@ python-dateutil = ">=2.4"
 
 [[package]]
 name = "filelock"
-version = "3.21.2"
+version = "3.24.3"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "filelock-3.21.2-py3-none-any.whl", hash = "sha256:d6cd4dbef3e1bb63bc16500fc5aa100f16e405bbff3fb4231711851be50c1560"},
-    {file = "filelock-3.21.2.tar.gz", hash = "sha256:cfd218cfccf8b947fce7837da312ec3359d10ef2a47c8602edd59e0bacffb708"},
+    {file = "filelock-3.24.3-py3-none-any.whl", hash = "sha256:426e9a4660391f7f8a810d71b0555bce9008b0a1cc342ab1f6947d37639e002d"},
+    {file = "filelock-3.24.3.tar.gz", hash = "sha256:011a5644dc937c22699943ebbfc46e969cdde3e171470a6e40b9533e5a72affa"},
 ]
 
 [[package]]
@@ -2419,13 +2419,13 @@ tests = ["pytest (>=9)", "typing-extensions (>=4.15)"]
 
 [[package]]
 name = "platformdirs"
-version = "4.7.1"
+version = "4.9.2"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "platformdirs-4.7.1-py3-none-any.whl", hash = "sha256:06ac79ae0c5025949f62711e3f7cd178736515a29bcc669f42a216016cd1dc7a"},
-    {file = "platformdirs-4.7.1.tar.gz", hash = "sha256:6f4ff8472e482af4b7e67a183fbe63da846a9b34f57d5019c4d112a181003d82"},
+    {file = "platformdirs-4.9.2-py3-none-any.whl", hash = "sha256:9170634f126f8efdae22fb58ae8a0eaa86f38365bc57897a6c4f781d1f5875bd"},
+    {file = "platformdirs-4.9.2.tar.gz", hash = "sha256:9a33809944b9db043ad67ca0db94b14bf452cc6aeaac46a88ea55b26e2e9d291"},
 ]
 
 [[package]]
@@ -2642,13 +2642,13 @@ test = ["psleak", "pytest", "pytest-instafail", "pytest-xdist", "pywin32", "setu
 
 [[package]]
 name = "py-cid"
-version = "0.4.0"
+version = "0.5.0"
 description = "Self-describing content-addressed identifiers for distributed systems"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "py_cid-0.4.0-py3-none-any.whl", hash = "sha256:6a3183a3088b219dbf3cb37eec7d47a644be3f3ebabdf38347c2e9312621d6cc"},
-    {file = "py_cid-0.4.0.tar.gz", hash = "sha256:7c15d6a83f59c3a4c7fbff793f1d4cbfc831e90355fd0e2c5cfe927c21733cc3"},
+    {file = "py_cid-0.5.0-py3-none-any.whl", hash = "sha256:2fbad437384534e2a0ab0c4068aac3e510c4cb710c89c8f6bf98f4b07ed54e3e"},
+    {file = "py_cid-0.5.0.tar.gz", hash = "sha256:93c62586c672353a9862f3fce13c9848ea39a00378e0980e2f0eed91631f3d28"},
 ]
 
 [package.dependencies]
@@ -3572,18 +3572,18 @@ yaml = ["ruamel.yaml (>=0.17.0)"]
 
 [[package]]
 name = "staking_deposit"
-version = "2.4.0"
+version = "2.8.0"
 description = ""
 optional = false
-python-versions = ">=3.8,<4"
+python-versions = ">=3.12,<4"
 files = []
 develop = false
 
 [package.source]
 type = "git"
 url = "https://github.com/ethereum/staking-deposit-cli.git"
-reference = "v2.4.0"
-resolved_reference = "ef89710443814331aa2f592067dc4d6995cc4f6e"
+reference = "v2.8.0"
+resolved_reference = "948d3fc358fdae54ff47dd8045206276b0b6b914"
 
 [[package]]
 name = "stevedore"
@@ -3728,13 +3728,13 @@ files = [
 
 [[package]]
 name = "trio"
-version = "0.32.0"
+version = "0.33.0"
 description = "A friendly Python library for async concurrency and I/O"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "trio-0.32.0-py3-none-any.whl", hash = "sha256:4ab65984ef8370b79a76659ec87aa3a30c5c7c83ff250b4de88c29a8ab6123c5"},
-    {file = "trio-0.32.0.tar.gz", hash = "sha256:150f29ec923bcd51231e1d4c71c7006e65247d68759dd1c19af4ea815a25806b"},
+    {file = "trio-0.33.0-py3-none-any.whl", hash = "sha256:3bd5d87f781d9b0192d592aef28691f8951d6c2e41b7e1da4c25cde6c180ae9b"},
+    {file = "trio-0.33.0.tar.gz", hash = "sha256:a29b92b73f09d4b48ed249acd91073281a7f1063f09caba5dc70465b5c7aa970"},
 ]
 
 [package.dependencies]
@@ -3857,23 +3857,23 @@ files = [
 
 [[package]]
 name = "virtualenv"
-version = "20.36.1"
+version = "20.38.0"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "virtualenv-20.36.1-py3-none-any.whl", hash = "sha256:575a8d6b124ef88f6f51d56d656132389f961062a9177016a50e4f507bbcc19f"},
-    {file = "virtualenv-20.36.1.tar.gz", hash = "sha256:8befb5c81842c641f8ee658481e42641c68b5eab3521d8e092d18320902466ba"},
+    {file = "virtualenv-20.38.0-py3-none-any.whl", hash = "sha256:d6e78e5889de3a4742df2d3d44e779366325a90cf356f15621fddace82431794"},
+    {file = "virtualenv-20.38.0.tar.gz", hash = "sha256:94f39b1abaea5185bf7ea5a46702b56f1d0c9aa2f41a6c2b8b0af4ddc74c10a7"},
 ]
 
 [package.dependencies]
 distlib = ">=0.3.7,<1"
-filelock = {version = ">=3.20.1,<4", markers = "python_version >= \"3.10\""}
+filelock = {version = ">=3.24.2,<4", markers = "python_version >= \"3.10\""}
 platformdirs = ">=3.9.1,<5"
 
 [package.extras]
-docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
-test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8)", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10)"]
+docs = ["furo (>=2023.7.26)", "pre-commit-uv (>=4.1.4)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "sphinx-argparse (>=0.4)", "sphinx-autodoc-typehints (>=3.6.2)", "sphinx-copybutton (>=0.5.2)", "sphinx-inline-tabs (>=2025.12.21.14)", "sphinxcontrib-mermaid (>=2)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
+test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8)", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "pytest-xdist (>=3.5)", "setuptools (>=68)", "time-machine (>=2.10)"]
 
 [[package]]
 name = "web3"
@@ -4152,4 +4152,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "2faf47ce08c856b6e83d3262004049174d988a8d5a5e231a4952b7c6dce7e3fd"
+content-hash = "23bf1f981af0b4ad47904d81e85d1e216ad791c43b920cdbf1609f6d54b85a89"
