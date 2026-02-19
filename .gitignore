@@ -170,3 +170,7 @@ cython_debug/
 *.env
 *.db
 local
+
+# Claude
+.claude
+CLAUDE.md
