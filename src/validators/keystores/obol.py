@@ -12,25 +12,18 @@ from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
 from src.config import settings
-from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
+from src.validators.keystores.base import LocalKeystore
 from src.validators.keystores.exceptions import KeystoreException
 from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-class ObolKeystore(LocalKeystoreMixin, BaseKeystore):
+class ObolKeystore(LocalKeystore):
     """
     Similar to LocalKeystore from Stakewise Operator.
     Also pubkey_to_share attribute is filled using cluster lock file.
     """
-
-    keys: Keys
-
-    def __init__(self, keys: Keys, pubkey_to_share: dict[HexStr, HexStr]):
-        self.keys = keys
-        self.pubkey_to_share = pubkey_to_share
-        self.share_to_pubkey = {v: k for k, v in pubkey_to_share.items()}
 
     @staticmethod
     async def load() -> 'ObolKeystore':
@@ -73,19 +66,6 @@ class ObolKeystore(LocalKeystoreMixin, BaseKeystore):
             pub_key_to_share[public_key] = public_key_share
 
         return pub_key_to_share
-
-    def __bool__(self) -> bool:
-        return len(self.keys) > 0
-
-    def __contains__(self, public_key: HexStr) -> bool:
-        return public_key in self.keys
-
-    def __len__(self) -> int:
-        return len(self.keys)
-
-    @property
-    def public_keys(self) -> list[HexStr]:
-        return list(self.keys.keys())
 
     @staticmethod
     def list_keystore_files(keystores_dir: Path) -> list[KeystoreFile]:

@@ -19,34 +19,31 @@ from src.config import settings
 from src.ssv_operators.database import SSVValidatorCrud
 from src.ssv_operators.typings import SSVValidator
 from src.validators.keystores import ssv_api
-from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
+from src.validators.keystores.base import LocalKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-class SSVKeystore(LocalKeystoreMixin, BaseKeystore):
+class SSVKeystore(LocalKeystore):
     """
     Similar to LocalKeystore from Stakewise Operator, but:
     * keys are loaded from the database
     * new attributes added:
     - `ssv_operator_id`: SSV Operator id
     - `ssv_operator_key`: SSV Operator private key
-    - `pubkey_to_share`: mapping from validator public key to its share public key
     """
 
     def __init__(
         self,
         ssv_operator_id: int,
         ssv_operator_key: RSA.RsaKey,
-        keys: Keys,
+        pubkey_share_to_privkey_share: Keys,
         pubkey_to_share: dict[HexStr, HexStr],
     ):
+        super().__init__(pubkey_share_to_privkey_share, pubkey_to_share)
         self.ssv_operator_id = ssv_operator_id
         self.ssv_operator_key = ssv_operator_key
-        self.keys = keys
-        self.pubkey_to_share = pubkey_to_share
-        self.share_to_pubkey = {v: k for k, v in pubkey_to_share.items()}
 
     @staticmethod
     async def load() -> 'SSVKeystore':
@@ -97,22 +94,9 @@ class SSVKeystore(LocalKeystoreMixin, BaseKeystore):
         return SSVKeystore(
             ssv_operator_id=ssv_operator_id,
             ssv_operator_key=operator_key,
-            keys=keys,
+            pubkey_share_to_privkey_share=keys,
             pubkey_to_share=pubkey_to_share,
         )
-
-    def __bool__(self) -> bool:
-        return len(self.keys) > 0
-
-    def __contains__(self, public_key_share: HexStr) -> bool:
-        return public_key_share in self.keys
-
-    def __len__(self) -> int:
-        return len(self.keys)
-
-    @property
-    def public_keys(self) -> list[HexStr]:
-        return list(self.keys.keys())
 
     async def update_from_ssv_validators(self, ssv_validators: list[SSVValidator]) -> None:
         """
@@ -135,7 +119,7 @@ class SSVKeystore(LocalKeystoreMixin, BaseKeystore):
                 operator_key=self.ssv_operator_key,
             )
 
-            self.keys[key_share.public_key_share] = key_share.key_share
+            self.pubkey_share_to_privkey_share[key_share.public_key_share] = key_share.key_share
             self.pubkey_to_share[key_share.public_key] = key_share.public_key_share
             self.share_to_pubkey[key_share.public_key_share] = key_share.public_key
 

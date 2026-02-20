@@ -54,8 +54,8 @@ class ObolRemoteKeystore(BaseKeystore):
     """
 
     def __init__(self, public_keys: list[HexStr], pubkey_to_share: dict[HexStr, HexStr]):
+        super().__init__(pubkey_to_share)
         self._public_keys = public_keys
-        self.pubkey_to_share = pubkey_to_share
 
     @staticmethod
     async def load() -> 'BaseKeystore':
@@ -90,10 +90,6 @@ class ObolRemoteKeystore(BaseKeystore):
 
     def __contains__(self, public_key: HexStr) -> bool:
         return public_key in self._public_keys
-
-    @property
-    def public_keys(self) -> list[HexStr]:
-        return self._public_keys
 
     async def get_exit_signature(
         self, validator_index: int, public_key_share: HexStr, fork: ConsensusFork | None = None
