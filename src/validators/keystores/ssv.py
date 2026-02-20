@@ -32,6 +32,8 @@ class SSVKeystore(LocalKeystore):
     * new attributes added:
     - `ssv_operator_id`: SSV Operator id
     - `ssv_operator_key`: SSV Operator private key
+
+    Inherits `pubkey_to_share` and `share_to_pubkey` mappings from BaseKeystore.
     """
 
     def __init__(
