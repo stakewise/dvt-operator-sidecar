@@ -6,21 +6,20 @@ from pathlib import Path
 from typing import cast
 
 import milagro_bls_binding as bls
-from eth_typing import BLSSignature, HexStr
+from eth_typing import HexStr
 from staking_deposit.key_handling.keystore import ScryptKeystore
-from sw_utils import ConsensusFork, get_exit_message_signing_root
 from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
 from src.config import settings
-from src.validators.keystores.base import BaseKeystore
+from src.validators.keystores.base import BaseKeystore, LocalKeystoreMixin
 from src.validators.keystores.exceptions import KeystoreException
 from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-class ObolKeystore(BaseKeystore):
+class ObolKeystore(LocalKeystoreMixin, BaseKeystore):
     """
     Similar to LocalKeystore from Stakewise Operator.
     Also pubkey_to_share attribute is filled using cluster lock file.
@@ -31,6 +30,7 @@ class ObolKeystore(BaseKeystore):
     def __init__(self, keys: Keys, pubkey_to_share: dict[HexStr, HexStr]):
         self.keys = keys
         self.pubkey_to_share = pubkey_to_share
+        self.share_to_pubkey = {v: k for k, v in pubkey_to_share.items()}
 
     @staticmethod
     async def load() -> 'ObolKeystore':
@@ -82,21 +82,6 @@ class ObolKeystore(BaseKeystore):
 
     def __len__(self) -> int:
         return len(self.keys)
-
-    async def get_exit_signature(
-        self, validator_index: int, public_key: HexStr, fork: ConsensusFork | None = None
-    ) -> BLSSignature:
-        private_key = self.keys[public_key]
-        fork = fork or settings.network_config.SHAPELLA_FORK
-        genesis_validators_root = settings.network_config.GENESIS_VALIDATORS_ROOT
-
-        message = get_exit_message_signing_root(
-            validator_index=validator_index,
-            genesis_validators_root=genesis_validators_root,
-            fork=fork,
-        )
-
-        return bls.Sign(private_key, message)
 
     @property
     def public_keys(self) -> list[HexStr]:

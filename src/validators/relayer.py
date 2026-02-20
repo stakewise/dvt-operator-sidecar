@@ -19,32 +19,33 @@ async def get_info(session: ClientSession) -> dict:
     return jsn
 
 
-async def get_exits(session: ClientSession) -> list[dict]:
+async def get_validators(session: ClientSession) -> list[dict]:
     """
-    `exits` represent exit messages to sign.
+    Get validators from relayer to sign deposit and exit messages.
     """
-    url = urljoin(settings.relayer_endpoint, '/exits')
+    url = urljoin(settings.relayer_endpoint, '/validators')
     async with session.get(url) as res:
         res.raise_for_status()
         jsn = await res.json()
-    return jsn['exits']
+    return jsn['validators']
 
 
-async def push_exit_signatures(
+async def push_signatures(
     session: ClientSession,
-    public_key_to_exit_signature: dict[HexStr, HexStr],
+    public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]],
     share_index: int,
 ) -> None:
     shares = []
-    for public_key, exit_signature in public_key_to_exit_signature.items():
+    for public_key, (exit_signature, deposit_signature) in public_key_to_signatures.items():
         shares.append(
             {
                 'public_key': public_key,
                 'exit_signature': exit_signature,
+                'deposit_signature': deposit_signature,
             }
         )
     jsn = {'share_index': share_index, 'shares': shares}
-    logger.info('push exit signatures for share_index %s', share_index)
-    url = urljoin(settings.relayer_endpoint, '/exit-signature')
+    logger.info('push signatures for share_index %s', share_index)
+    url = urljoin(settings.relayer_endpoint, '/signatures')
     async with session.post(url, json=jsn) as res:
         res.raise_for_status()
