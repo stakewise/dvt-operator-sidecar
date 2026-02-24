@@ -5,9 +5,9 @@ Works in conjuction with [DVT-relayer](https://github.com/stakewise/dvt-relayer/
 
 DVT sidecar:
 
-1. Loads DV keystores
-2. Polls validator exits from Relayer
-3. Pushes exit signature shares to Relayer on behalf of DVT operators.
+1. Loads distributed validator (DV) keystores.
+2. Retrieves validator data from the Relayer.
+3. Submits deposit signature shares and exit signature shares to the Relayer on behalf of DVT operators.
 
 ## Run in docker
 
