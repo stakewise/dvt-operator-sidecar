@@ -82,14 +82,8 @@ class ObolRemoteKeystore(BaseKeystore):
 
         return pub_key_to_share
 
-    def __bool__(self) -> bool:
-        return bool(self._public_keys)
-
     def __len__(self) -> int:
         return len(self._public_keys)
-
-    def __contains__(self, public_key: HexStr) -> bool:
-        return public_key in self._public_keys
 
     async def get_exit_signature(
         self, validator_index: int, public_key_share: HexStr, fork: ConsensusFork | None = None

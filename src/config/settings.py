@@ -77,6 +77,13 @@ def validate_settings() -> None:
     if remote_signer_url and cluster_type != OBOL:
         raise RuntimeError('Remote signer keystore is implemented for Obol only')
 
+    # Remote signer does not support deposit signing
+    if remote_signer_url:
+        raise RuntimeError(
+            'Remote signer (REMOTE_SIGNER_URL) is not supported in 1.x release. '
+            'Support for remote signer may be added in a future release.'
+        )
+
     # Check OBOL_CLUSTER_LOCK_FILE
     if cluster_type == OBOL and not obol_cluster_lock_file:
         raise RuntimeError('OBOL_CLUSTER_LOCK_FILE must be set')

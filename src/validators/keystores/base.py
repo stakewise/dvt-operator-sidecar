@@ -29,14 +29,6 @@ class BaseKeystore(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def __bool__(self) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def __contains__(self, public_key: HexStr) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def __len__(self) -> int:
         raise NotImplementedError
 
@@ -61,12 +53,6 @@ class LocalKeystore(BaseKeystore):
     ) -> None:
         super().__init__(pubkey_to_share)
         self.pubkey_share_to_privkey_share = pubkey_share_to_privkey_share
-
-    def __bool__(self) -> bool:
-        return len(self.pubkey_share_to_privkey_share) > 0
-
-    def __contains__(self, public_key: HexStr) -> bool:
-        return public_key in self.pubkey_share_to_privkey_share
 
     def __len__(self) -> int:
         return len(self.pubkey_share_to_privkey_share)
