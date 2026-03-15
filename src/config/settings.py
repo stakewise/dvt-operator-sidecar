@@ -80,7 +80,7 @@ def validate_settings() -> None:
     # Remote signer does not support deposit signing
     if remote_signer_url:
         raise RuntimeError(
-            'Remote signer (REMOTE_SIGNER_URL) is not supported in 1.x release. '
+            'Remote signer (REMOTE_SIGNER_URL) is not supported in this release. '
             'Support for remote signer may be added in a future release.'
         )
 
