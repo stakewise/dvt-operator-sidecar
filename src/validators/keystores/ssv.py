@@ -11,7 +11,6 @@ from Cryptodome.Random import get_random_bytes
 from eth_account import Account
 from eth_typing import HexStr
 from hexbytes import HexBytes
-from sw_utils import chunkify
 from web3 import Web3
 
 from src.common.setup_logging import ExtendedLogger
@@ -323,11 +322,19 @@ class SSVSharesData:
         if len(data) != shares_expected_length:
             raise RuntimeError('Unexpected shares data length')
 
-        public_key_shares = chunkify(data[signature_offset:pub_keys_offset], public_key_length)
+        pub_keys_data = bytes(data[signature_offset:pub_keys_offset])
+        public_key_shares = [
+            HexBytes(pub_keys_data[i : i + public_key_length])
+            for i in range(0, len(pub_keys_data), public_key_length)
+        ]
 
-        encrypted_key_shares = chunkify(data[pub_keys_offset:], encrypted_key_length)
+        enc_keys_data = bytes(data[pub_keys_offset:])
+        encrypted_key_shares = [
+            HexBytes(enc_keys_data[i : i + encrypted_key_length])
+            for i in range(0, len(enc_keys_data), encrypted_key_length)
+        ]
 
         return SSVSharesData(
-            public_key_shares=list(public_key_shares),
-            encrypted_key_shares=list(encrypted_key_shares),
+            public_key_shares=public_key_shares,
+            encrypted_key_shares=encrypted_key_shares,
         )
