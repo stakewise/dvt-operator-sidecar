@@ -6,7 +6,7 @@ from typing import cast
 
 import milagro_bls_binding as bls
 from aiohttp import ClientSession, ClientTimeout
-from eth_typing import BLSPubkey, BLSSignature, HexStr
+from eth_typing import BLSPubkey, BLSSignature, ChecksumAddress, HexStr
 from sw_utils import get_exit_message_signing_root
 from sw_utils.common import urljoin
 from sw_utils.typings import ConsensusFork
@@ -101,11 +101,21 @@ class ObolRemoteKeystore(BaseKeystore):
             public_key_bytes, validator_index, fork, message
         )
 
-        bls.Verify(BLSPubkey(Web3.to_bytes(hexstr=public_key_share)), message, exit_signature)
+        if not bls.Verify(
+            BLSPubkey(Web3.to_bytes(hexstr=public_key_share)), message, exit_signature
+        ):
+            raise RuntimeError(
+                'Invalid exit signature received from remote signer for validator index '
+                f'{validator_index}'
+            )
         return exit_signature
 
     async def get_deposit_signature(
-        self, public_key_share: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
+        self,
+        public_key_share: HexStr,
+        vault: ChecksumAddress,
+        amount: int,
+        validator_type: ValidatorType,
     ) -> BLSSignature:
         raise NotImplementedError('Deposit signing is not supported for remote signer')
 

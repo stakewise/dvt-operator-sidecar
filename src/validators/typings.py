@@ -1,6 +1,6 @@
 from enum import Enum
 
-from eth_typing import HexAddress, HexStr
+from eth_typing import ChecksumAddress
 from sw_utils.signing import (
     get_v1_withdrawal_credentials,
     get_v2_withdrawal_credentials,
@@ -13,8 +13,11 @@ class ValidatorType(Enum):
     V2 = '0x02'
 
 
-def get_withdrawal_credentials(vault: HexStr, validator_type: ValidatorType) -> Bytes32:
-    vault_address = HexAddress(vault)
+def get_withdrawal_credentials(
+    vault_address: ChecksumAddress, validator_type: ValidatorType
+) -> Bytes32:
     if validator_type == ValidatorType.V1:
         return get_v1_withdrawal_credentials(vault_address)
-    return get_v2_withdrawal_credentials(vault_address)
+    if validator_type == ValidatorType.V2:
+        return get_v2_withdrawal_credentials(vault_address)
+    raise ValueError(f'Unsupported validator type: {validator_type.value}')

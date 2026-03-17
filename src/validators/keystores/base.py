@@ -1,7 +1,7 @@
 import abc
 
 import milagro_bls_binding as bls
-from eth_typing import BLSSignature, HexStr
+from eth_typing import BLSSignature, ChecksumAddress, HexStr
 from sw_utils import ConsensusFork, get_exit_message_signing_root
 from sw_utils.signing import (
     DepositMessage,
@@ -40,7 +40,11 @@ class BaseKeystore(abc.ABC):
 
     @abc.abstractmethod
     async def get_deposit_signature(
-        self, public_key_share: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
+        self,
+        public_key_share: HexStr,
+        vault: ChecksumAddress,
+        amount: int,
+        validator_type: ValidatorType,
     ) -> BLSSignature:
         raise NotImplementedError
 
@@ -73,7 +77,11 @@ class LocalKeystore(BaseKeystore):
         return bls.Sign(private_key_share, message)
 
     async def get_deposit_signature(
-        self, public_key_share: HexStr, vault: HexStr, amount: int, validator_type: ValidatorType
+        self,
+        public_key_share: HexStr,
+        vault: ChecksumAddress,
+        amount: int,
+        validator_type: ValidatorType,
     ) -> BLSSignature:
         private_key_share = self.pubkey_share_to_privkey_share[public_key_share]
         public_key = self.share_to_pubkey[public_key_share]

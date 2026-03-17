@@ -127,6 +127,9 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
             public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]] = {}
             for validator in validators:
                 public_key = validator['public_key']
+                vault = Web3.to_checksum_address(validator['vault'])
+                amount = int(validator['amount'])
+                validator_type = ValidatorType(validator['validator_type'])
 
                 pub_key_share = keystore.pubkey_to_share.get(public_key)
                 if pub_key_share is None:
@@ -143,9 +146,9 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
                 )
                 deposit_signature = await keystore.get_deposit_signature(
                     pub_key_share,
-                    validator['vault'],
-                    validator['amount'],
-                    ValidatorType(validator['validator_type']),
+                    vault,
+                    amount,
+                    validator_type,
                 )
                 public_key_to_signatures[public_key] = (
                     Web3.to_hex(exit_signature),
