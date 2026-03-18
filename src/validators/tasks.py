@@ -24,7 +24,7 @@ from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.load import load_keystore
 from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.ssv import SSVKeystore
-from src.validators.typings import ValidatorType
+from src.validators.typings import RelayerValidator
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -126,31 +126,26 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
             # calculate exit and deposit signature shares
             public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]] = {}
             for validator in validators:
-                public_key = validator['public_key']
-                vault = Web3.to_checksum_address(validator['vault'])
-                amount = int(validator['amount'])
-                validator_type = ValidatorType(validator['validator_type'])
-
-                pub_key_share = keystore.pubkey_to_share.get(public_key)
+                pub_key_share = keystore.pubkey_to_share.get(validator.public_key)
                 if pub_key_share is None:
                     # Another cluster owns current public key
                     continue
 
-                if share_index in validator['share_indexes_ready']:
+                if share_index in validator.share_indexes_ready:
                     continue
 
                 exit_signature = await keystore.get_exit_signature(
-                    validator['validator_index'],
+                    validator.validator_index,
                     pub_key_share,
                     settings.network_config.SHAPELLA_FORK,
                 )
                 deposit_signature = await keystore.get_deposit_signature(
                     pub_key_share,
-                    vault,
-                    amount,
-                    validator_type,
+                    validator.vault,
+                    validator.amount,
+                    validator.validator_type,
                 )
-                public_key_to_signatures[public_key] = (
+                public_key_to_signatures[validator.public_key] = (
                     Web3.to_hex(exit_signature),
                     Web3.to_hex(deposit_signature),
                 )
@@ -165,15 +160,21 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
             await asyncio.sleep(settings.poll_interval)
 
 
-async def poll_validators(session: aiohttp.ClientSession) -> list[dict]:
+async def poll_validators(session: aiohttp.ClientSession) -> list[RelayerValidator]:
     """
     Periodically checks relayer for validators to sign.
     """
     while True:
         try:
-            validators = await relayer.get_validators(session)
-            logger.info('Got %d validators from relayer', len(validators))
-            if validators:
+            raw_validators = await relayer.get_validators(session)
+            logger.info('Got %d validators from relayer', len(raw_validators))
+            if raw_validators:
+                validators = []
+                for raw_validator in raw_validators:
+                    try:
+                        validators.append(RelayerValidator(**raw_validator))
+                    except Exception as e:
+                        logger.error_verbose('Failed to parse validator data: %s', e)
                 return validators
         except (ClientError, asyncio.TimeoutError) as e:
             logger.error_verbose('Failed to get validators: %s', e)
