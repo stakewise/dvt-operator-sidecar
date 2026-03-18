@@ -9,7 +9,6 @@ from web3 import Web3
 
 @dataclass
 class NetworkConfig(BaseNetworkConfig):
-    DEFAULT_DVT_RELAYER_ENDPOINT: str
     SSV_REGISTRY_CONTRACT_ADDRESS: ChecksumAddress
     SSV_GENESIS_BLOCK: BlockNumber
 
@@ -17,7 +16,6 @@ class NetworkConfig(BaseNetworkConfig):
 NETWORKS: dict[str, NetworkConfig] = {
     MAINNET: NetworkConfig(
         **asdict(BASE_NETWORKS[MAINNET]),
-        DEFAULT_DVT_RELAYER_ENDPOINT='https://mainnet-dvt-relayer.stakewise.io',
         SSV_REGISTRY_CONTRACT_ADDRESS=Web3.to_checksum_address(
             '0xDD9BC35aE942eF0cFa76930954a156B3fF30a4E1'
         ),
@@ -25,7 +23,6 @@ NETWORKS: dict[str, NetworkConfig] = {
     ),
     HOODI: NetworkConfig(
         **asdict(BASE_NETWORKS[HOODI]),
-        DEFAULT_DVT_RELAYER_ENDPOINT='https://hoodi-dvt-relayer.stakewise.io',
         SSV_REGISTRY_CONTRACT_ADDRESS=Web3.to_checksum_address(
             '0x58410Bef803ECd7E63B23664C586A6DB72DAf59c'
         ),

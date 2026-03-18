@@ -24,6 +24,7 @@ from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.load import load_keystore
 from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.ssv import SSVKeystore
+from src.validators.typings import RelayerValidator
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -53,11 +54,11 @@ async def obol_create_tasks() -> None:
             )
             keystore = await ObolKeystore.load_from_dir(obol_keystores_dir, node_index)
 
-        logger.info('Starting exit signatures task for node index %s', node_index)
+        logger.info('Starting signatures task for node index %s', node_index)
 
         share_index = node_index + 1
         asyncio.create_task(
-            poll_exits_and_push_signatures(cast(BaseKeystore, keystore), share_index)
+            poll_validators_and_push_signatures(cast(BaseKeystore, keystore), share_index)
         )
 
 
@@ -72,9 +73,9 @@ async def ssv_create_tasks() -> None:
     asyncio.create_task(SSVValidatorTask(keystores_map=keystores_map).run())
 
     for ssv_operator_id, keystore in keystores_map.items():
-        logger.info('Starting exit signatures task for operator %s', ssv_operator_id)
+        logger.info('Starting signatures task for operator %s', ssv_operator_id)
 
-        asyncio.create_task(poll_exits_and_push_signatures(keystore, ssv_operator_id))
+        asyncio.create_task(poll_validators_and_push_signatures(keystore, ssv_operator_id))
 
 
 async def get_keystores_map() -> dict[int, BaseKeystore]:
@@ -116,57 +117,70 @@ def get_obol_node_indexes() -> list[int]:
     raise RuntimeError('OBOL_NODE_INDEXES or OBOL_NODE_INDEX must be set')
 
 
-# pylint: disable=redefined-builtin
-async def poll_exits_and_push_signatures(keystore: BaseKeystore, share_index: int) -> None:
+async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_index: int) -> None:
     async with aiohttp.ClientSession(timeout=ClientTimeout(settings.relayer_timeout)) as session:
         while True:
-            # get validators from Relayer
-            exits = await poll_exits(session)
+            # Get validators from Relayer
+            validators = await poll_validators(session)
 
-            # calculate exit signature shares
-            public_key_to_exit_signature: dict[HexStr, HexStr] = {}
-            for exit in exits:
-                public_key = exit['public_key']
-
-                pub_key_share = keystore.pubkey_to_share.get(public_key)
+            # Process validators and prepare signatures to push
+            public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]] = {}
+            for validator in validators:
+                pub_key_share = keystore.pubkey_to_share.get(validator.public_key)
                 if pub_key_share is None:
                     # Another cluster owns current public key
                     continue
 
-                if exit['is_exit_signature_ready']:
+                # Check if the Relayer already has signatures for this share index
+                if share_index in validator.share_indexes_ready:
                     continue
 
+                # Generate exit and deposit signature shares
                 exit_signature = await keystore.get_exit_signature(
-                    exit['validator_index'],
+                    validator.validator_index,
                     pub_key_share,
                     settings.network_config.SHAPELLA_FORK,
                 )
-                public_key_to_exit_signature[public_key] = Web3.to_hex(exit_signature)
+                deposit_signature = await keystore.get_deposit_signature(
+                    pub_key_share,
+                    validator.vault,
+                    validator.amount,
+                    validator.validator_type,
+                )
+                # Collect signature shares into a mapping
+                public_key_to_signatures[validator.public_key] = (
+                    Web3.to_hex(exit_signature),
+                    Web3.to_hex(deposit_signature),
+                )
 
-            # push exit signature shares to Relayer
-            if public_key_to_exit_signature:
+            # Push signature shares to Relayer
+            if public_key_to_signatures:
                 try:
-                    await relayer.push_exit_signatures(
-                        session, public_key_to_exit_signature, share_index
-                    )
+                    await relayer.push_signatures(session, public_key_to_signatures, share_index)
                 except (ClientError, asyncio.TimeoutError) as e:
-                    logger.error_verbose('Failed to push exit signatures: %s', e)
+                    logger.error_verbose('Failed to push signatures: %s', e)
 
             await asyncio.sleep(settings.poll_interval)
 
 
-async def poll_exits(session: aiohttp.ClientSession) -> list[dict]:
+async def poll_validators(session: aiohttp.ClientSession) -> list[RelayerValidator]:
     """
-    Periodically checks relayer for new validator exits.
+    Periodically checks relayer for validators to sign.
     """
     while True:
         try:
-            exits = await relayer.get_exits(session)
-            logger.info('Got %d validator exits from relayer', len(exits))
-            if exits:
-                return exits
+            raw_validators = await relayer.get_validators(session)
+            logger.info('Got %d validators from relayer', len(raw_validators))
+            if raw_validators:
+                validators = []
+                for raw_validator in raw_validators:
+                    try:
+                        validators.append(RelayerValidator(**raw_validator))
+                    except Exception as e:
+                        logger.error_verbose('Failed to parse validator data: %s', e)
+                return validators
         except (ClientError, asyncio.TimeoutError) as e:
-            logger.error_verbose('Failed to get validator exits: %s', e)
+            logger.error_verbose('Failed to get validators: %s', e)
 
         await asyncio.sleep(settings.poll_interval)
 

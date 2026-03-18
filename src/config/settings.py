@@ -16,9 +16,7 @@ verbose: bool = config('VERBOSE', default=False, cast=bool)
 sentry_dsn: str = config('SENTRY_DSN', default='')
 sentry_environment = config('SENTRY_ENVIRONMENT', default='')
 
-relayer_endpoint: str = config(
-    'RELAYER_ENDPOINT', default=network_config.DEFAULT_DVT_RELAYER_ENDPOINT
-)
+relayer_endpoint: str = config('RELAYER_ENDPOINT')
 relayer_timeout: int = config('RELAYER_TIMEOUT', cast=int, default=10)
 
 execution_endpoint: str = config('EXECUTION_ENDPOINT', default='')
@@ -78,6 +76,13 @@ def validate_settings() -> None:
     # Check cluster type for remote signer
     if remote_signer_url and cluster_type != OBOL:
         raise RuntimeError('Remote signer keystore is implemented for Obol only')
+
+    # Remote signer does not support deposit signing
+    if remote_signer_url:
+        raise RuntimeError(
+            'Remote signer (REMOTE_SIGNER_URL) is not supported in this release. '
+            'Support for remote signer may be added in a future release.'
+        )
 
     # Check OBOL_CLUSTER_LOCK_FILE
     if cluster_type == OBOL and not obol_cluster_lock_file:
