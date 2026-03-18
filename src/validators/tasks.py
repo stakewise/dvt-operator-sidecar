@@ -120,10 +120,10 @@ def get_obol_node_indexes() -> list[int]:
 async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_index: int) -> None:
     async with aiohttp.ClientSession(timeout=ClientTimeout(settings.relayer_timeout)) as session:
         while True:
-            # get validators from Relayer
+            # Get validators from Relayer
             validators = await poll_validators(session)
 
-            # calculate exit and deposit signature shares
+            # Process validators and prepare signatures to push
             public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]] = {}
             for validator in validators:
                 pub_key_share = keystore.pubkey_to_share.get(validator.public_key)
@@ -131,9 +131,11 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
                     # Another cluster owns current public key
                     continue
 
+                # Check if the Relayer already has signatures for this share index
                 if share_index in validator.share_indexes_ready:
                     continue
 
+                # Generate exit and deposit signature shares
                 exit_signature = await keystore.get_exit_signature(
                     validator.validator_index,
                     pub_key_share,
@@ -145,12 +147,13 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
                     validator.amount,
                     validator.validator_type,
                 )
+                # Collect signature shares into a mapping
                 public_key_to_signatures[validator.public_key] = (
                     Web3.to_hex(exit_signature),
                     Web3.to_hex(deposit_signature),
                 )
 
-            # push signature shares to Relayer
+            # Push signature shares to Relayer
             if public_key_to_signatures:
                 try:
                     await relayer.push_signatures(session, public_key_to_signatures, share_index)
