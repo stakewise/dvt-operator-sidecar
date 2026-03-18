@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import cast
 
@@ -11,26 +12,29 @@ from src.validators import relayer
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
 
-async def startup_checks() -> bool:
-    """
-    :return: True if all checks are ok, False otherwise
-    """
-    logger.info('Checking relayer endpoint %s', settings.relayer_endpoint)
-    try:
-        await _check_relayer_endpoint()
-    except Exception as e:
-        logger.error_verbose(
-            'Relayer endpoint check failed for %s: %s', settings.relayer_endpoint, e
-        )
-        return False
-
-    return True
+async def startup_checks() -> None:
+    info = await _wait_for_relayer_endpoint()
+    _check_relayer_network(info)
 
 
-async def _check_relayer_endpoint() -> None:
-    async with aiohttp.ClientSession(timeout=ClientTimeout(settings.relayer_timeout)) as session:
-        info = await relayer.get_info(session)
+async def _wait_for_relayer_endpoint() -> dict:
+    logger.info('Waiting for relayer endpoint %s', settings.relayer_endpoint)
+    while True:
+        try:
+            async with aiohttp.ClientSession(
+                timeout=ClientTimeout(settings.relayer_timeout)
+            ) as session:
+                info = await relayer.get_info(session)
+            logger.info('Relayer endpoint is available')
+            return info
+        except Exception as e:
+            logger.error_verbose(
+                'Relayer endpoint check failed for %s: %s', settings.relayer_endpoint, e
+            )
+        await asyncio.sleep(settings.poll_interval)
 
+
+def _check_relayer_network(info: dict) -> None:
     relayer_network = info['network']
     if relayer_network != settings.network:
         raise ValueError(

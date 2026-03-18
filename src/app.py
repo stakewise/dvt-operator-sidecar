@@ -27,9 +27,7 @@ async def app() -> None:
 
     await setup_database()
 
-    is_checks_ok = await startup_checks()
-    if not is_checks_ok:
-        return
+    await startup_checks()
 
     try:
         await create_tasks()
