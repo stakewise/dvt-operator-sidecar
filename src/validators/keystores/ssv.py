@@ -20,6 +20,7 @@ from src.ssv_operators.typings import SSVValidator
 from src.validators.keystores import ssv_api
 from src.validators.keystores.base import LocalKeystore
 from src.validators.keystores.typings import BLSPrivkey, Keys
+from src.validators.typings import PublicKeyShare
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -35,14 +36,16 @@ class SSVKeystore(LocalKeystore):
     Inherits `pubkey_to_share` and `share_to_pubkey` mappings from BaseKeystore.
     """
 
+    # pylint: disable-next=too-many-arguments
     def __init__(
         self,
         ssv_operator_id: int,
         ssv_operator_key: RSA.RsaKey,
         pubkey_share_to_privkey_share: Keys,
         pubkey_to_share: dict[HexStr, HexStr],
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]],
     ):
-        super().__init__(pubkey_share_to_privkey_share, pubkey_to_share)
+        super().__init__(pubkey_share_to_privkey_share, pubkey_to_share, pubkey_to_all_shares)
         self.ssv_operator_id = ssv_operator_id
         self.ssv_operator_key = ssv_operator_key
 
@@ -87,16 +90,21 @@ class SSVKeystore(LocalKeystore):
         # public_key -> public_key_share mapping
         pubkey_to_share: dict[HexStr, HexStr] = {}
 
+        # public_key -> all operators' public key shares
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]] = {}
+
         # Fill mappings
         for key_share in key_shares:
             keys[key_share.public_key_share] = key_share.key_share
             pubkey_to_share[key_share.public_key] = key_share.public_key_share
+            pubkey_to_all_shares[key_share.public_key] = key_share.all_public_key_shares
 
         return SSVKeystore(
             ssv_operator_id=ssv_operator_id,
             ssv_operator_key=operator_key,
             pubkey_share_to_privkey_share=keys,
             pubkey_to_share=pubkey_to_share,
+            pubkey_to_all_shares=pubkey_to_all_shares,
         )
 
     async def update_from_ssv_validators(self, ssv_validators: list[SSVValidator]) -> None:
@@ -123,6 +131,7 @@ class SSVKeystore(LocalKeystore):
             self.pubkey_share_to_privkey_share[key_share.public_key_share] = key_share.key_share
             self.pubkey_to_share[key_share.public_key] = key_share.public_key_share
             self.share_to_pubkey[key_share.public_key_share] = key_share.public_key
+            self.pubkey_to_all_shares[key_share.public_key] = key_share.all_public_key_shares
 
         logger.info('SSV keystore updated')
 
@@ -157,6 +166,8 @@ class SSVValidatorKeyShares:
     key_share: BLSPrivkey
     public_key_share: HexStr
     public_key: HexStr
+    # All operators' public key shares (share index is the operator id).
+    all_public_key_shares: list[PublicKeyShare]
 
     @staticmethod
     def from_validator(
@@ -186,10 +197,17 @@ class SSVValidatorKeyShares:
         if public_key_share != derived_public_key_share:
             raise RuntimeError('Public key mismatch')
 
+        # Share index of an operator is its operator id (see ssv_create_tasks).
+        all_public_key_shares = [
+            PublicKeyShare(share_index=op_id, public_key_share=Web3.to_hex(pubkey_share))
+            for op_id, pubkey_share in zip(validator.operator_ids, shares_data.public_key_shares)
+        ]
+
         return SSVValidatorKeyShares(
             key_share=BLSPrivkey(key_share),
             public_key_share=Web3.to_hex(public_key_share),
             public_key=validator.public_key,
+            all_public_key_shares=all_public_key_shares,
         )
 
     @staticmethod

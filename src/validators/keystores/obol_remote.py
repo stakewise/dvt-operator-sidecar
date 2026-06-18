@@ -15,7 +15,7 @@ from web3 import Web3
 from src.common.setup_logging import ExtendedLogger
 from src.config import settings
 from src.validators.keystores.base import BaseKeystore
-from src.validators.typings import ValidatorType
+from src.validators.typings import PublicKeyShare, ValidatorType
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -53,8 +53,13 @@ class ObolRemoteKeystore(BaseKeystore):
     Also pubkey_to_share attribute is filled using cluster lock file.
     """
 
-    def __init__(self, public_keys: list[HexStr], pubkey_to_share: dict[HexStr, HexStr]):
-        super().__init__(pubkey_to_share)
+    def __init__(
+        self,
+        public_keys: list[HexStr],
+        pubkey_to_share: dict[HexStr, HexStr],
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]],
+    ):
+        super().__init__(pubkey_to_share, pubkey_to_all_shares)
         self._public_keys = public_keys
 
     @staticmethod
@@ -64,7 +69,8 @@ class ObolRemoteKeystore(BaseKeystore):
 
         public_keys = await ObolRemoteKeystore._get_remote_signer_public_keys()
         pubkey_to_share = ObolRemoteKeystore.get_pubkey_to_share(settings.obol_node_index)
-        return ObolRemoteKeystore(public_keys, pubkey_to_share)
+        pubkey_to_all_shares = ObolRemoteKeystore.get_pubkey_to_all_shares()
+        return ObolRemoteKeystore(public_keys, pubkey_to_share, pubkey_to_all_shares)
 
     @staticmethod
     def load_cluster_lock() -> dict:
@@ -81,6 +87,21 @@ class ObolRemoteKeystore(BaseKeystore):
             pub_key_to_share[public_key] = public_key_share
 
         return pub_key_to_share
+
+    @staticmethod
+    def get_pubkey_to_all_shares() -> dict[HexStr, list[PublicKeyShare]]:
+        # Share index of node `i` is `i + 1` (see obol_create_tasks).
+        cluster_lock = ObolRemoteKeystore.load_cluster_lock()
+
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]] = {}
+        for dv in cluster_lock['distributed_validators']:
+            public_key = dv['distributed_public_key']
+            pubkey_to_all_shares[public_key] = [
+                PublicKeyShare(share_index=node_index + 1, public_key_share=share)
+                for node_index, share in enumerate(dv['public_shares'])
+            ]
+
+        return pubkey_to_all_shares
 
     def __len__(self) -> int:
         return len(self._public_keys)

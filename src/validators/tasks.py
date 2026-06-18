@@ -24,7 +24,7 @@ from src.validators.keystores.base import BaseKeystore
 from src.validators.keystores.load import load_keystore
 from src.validators.keystores.obol import ObolKeystore
 from src.validators.keystores.ssv import SSVKeystore
-from src.validators.typings import RelayerValidator
+from src.validators.typings import PushSignaturesRequestItem, RelayerValidator
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -124,7 +124,7 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
             validators = await poll_validators(session)
 
             # Process validators and prepare signatures to push
-            public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]] = {}
+            public_key_to_signatures: dict[HexStr, PushSignaturesRequestItem] = {}
             for validator in validators:
                 pub_key_share = keystore.pubkey_to_share.get(validator.public_key)
                 if pub_key_share is None:
@@ -148,9 +148,11 @@ async def poll_validators_and_push_signatures(keystore: BaseKeystore, share_inde
                     validator.validator_type,
                 )
                 # Collect signature shares into a mapping
-                public_key_to_signatures[validator.public_key] = (
-                    Web3.to_hex(exit_signature),
-                    Web3.to_hex(deposit_signature),
+                public_key_to_signatures[validator.public_key] = PushSignaturesRequestItem(
+                    public_key=validator.public_key,
+                    public_key_shares=keystore.pubkey_to_all_shares[validator.public_key],
+                    exit_signature=Web3.to_hex(exit_signature),
+                    deposit_signature=Web3.to_hex(deposit_signature),
                 )
 
             # Push signature shares to Relayer
