@@ -88,7 +88,7 @@ class LocalKeystore(BaseKeystore):
             fork=fork,
         )
 
-        return bls.Sign(private_key_share, message)
+        return BLSSignature(bls.Sign(private_key_share, message))
 
     async def get_deposit_signature(
         self,
@@ -110,4 +110,4 @@ class LocalKeystore(BaseKeystore):
         # Sign deposit message
         domain = compute_deposit_domain(settings.network_config.GENESIS_FORK_VERSION)
         signing_root = compute_signing_root(deposit_message, domain)
-        return bls.Sign(private_key_share, signing_root)
+        return BLSSignature(bls.Sign(private_key_share, signing_root))
