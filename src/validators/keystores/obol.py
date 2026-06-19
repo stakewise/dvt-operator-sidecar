@@ -15,6 +15,7 @@ from src.config import settings
 from src.validators.keystores.base import LocalKeystore
 from src.validators.keystores.exceptions import KeystoreException
 from src.validators.keystores.typings import BLSPrivkey, Keys, KeystoreFile
+from src.validators.typings import PublicKeyShare
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -49,7 +50,8 @@ class ObolKeystore(LocalKeystore):
         logger.info('Loaded %d keys', len(keys))
 
         pubkey_to_share = ObolKeystore.get_pubkey_to_share(node_index)
-        return ObolKeystore(Keys(keys), pubkey_to_share)
+        pubkey_to_all_shares = ObolKeystore.get_pubkey_to_all_shares()
+        return ObolKeystore(Keys(keys), pubkey_to_share, pubkey_to_all_shares)
 
     @staticmethod
     def load_cluster_lock() -> dict:
@@ -66,6 +68,21 @@ class ObolKeystore(LocalKeystore):
             pub_key_to_share[public_key] = public_key_share
 
         return pub_key_to_share
+
+    @staticmethod
+    def get_pubkey_to_all_shares() -> dict[HexStr, list[PublicKeyShare]]:
+        # Share index of node `i` is `i + 1` (see obol_create_tasks).
+        cluster_lock = ObolKeystore.load_cluster_lock()
+
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]] = {}
+        for dv in cluster_lock['distributed_validators']:
+            public_key = dv['distributed_public_key']
+            pubkey_to_all_shares[public_key] = [
+                PublicKeyShare(share_index=node_index + 1, public_key_share=share)
+                for node_index, share in enumerate(dv['public_shares'])
+            ]
+
+        return pubkey_to_all_shares
 
     @staticmethod
     def list_keystore_files(keystores_dir: Path) -> list[KeystoreFile]:

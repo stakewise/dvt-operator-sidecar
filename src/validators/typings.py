@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated, Any
 
@@ -30,6 +31,24 @@ class RelayerValidator(BaseModel):
     validator_type: ValidatorType
     validator_index: int
     share_indexes_ready: list[int]
+
+
+@dataclass
+class PublicKeyShare:
+    share_index: int
+    public_key_share: HexStr
+
+
+@dataclass
+class PushSignaturesRequestItem:
+    """A single validator's entry in the relayer push-signatures request."""
+
+    public_key: HexStr
+    # All operators' public key shares. Lets the relayer reconstruct the full
+    # validator public key and validate each share by index.
+    public_key_shares: list[PublicKeyShare]
+    exit_signature: HexStr
+    deposit_signature: HexStr
 
 
 def get_withdrawal_credentials(

@@ -12,16 +12,29 @@ from web3 import Web3
 
 from src.config import settings
 from src.validators.keystores.typings import Keys
-from src.validators.typings import ValidatorType, get_withdrawal_credentials
+from src.validators.typings import (
+    PublicKeyShare,
+    ValidatorType,
+    get_withdrawal_credentials,
+)
 
 
 class BaseKeystore(abc.ABC):
-    def __init__(self, pubkey_to_share: dict[HexStr, HexStr]) -> None:
+    def __init__(
+        self,
+        pubkey_to_share: dict[HexStr, HexStr],
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]],
+    ) -> None:
         # Mapping from validator public key to its share public key
         self.pubkey_to_share = pubkey_to_share
 
         # Reverse mapping from share public key to validator public key
         self.share_to_pubkey = {v: k for k, v in pubkey_to_share.items()}
+
+        # Mapping from validator public key to all operators' public key shares
+        # (each carrying its share index). Sent to the relayer so it can reconstruct
+        # the full validator public key and validate each submitted share by index.
+        self.pubkey_to_all_shares = pubkey_to_all_shares
 
     @staticmethod
     @abc.abstractmethod
@@ -54,8 +67,9 @@ class LocalKeystore(BaseKeystore):
         self,
         pubkey_share_to_privkey_share: Keys,
         pubkey_to_share: dict[HexStr, HexStr],
+        pubkey_to_all_shares: dict[HexStr, list[PublicKeyShare]],
     ) -> None:
-        super().__init__(pubkey_to_share)
+        super().__init__(pubkey_to_share, pubkey_to_all_shares)
         self.pubkey_share_to_privkey_share = pubkey_share_to_privkey_share
 
     def __len__(self) -> int:
@@ -74,7 +88,7 @@ class LocalKeystore(BaseKeystore):
             fork=fork,
         )
 
-        return bls.Sign(private_key_share, message)
+        return BLSSignature(bls.Sign(private_key_share, message))
 
     async def get_deposit_signature(
         self,
@@ -96,4 +110,4 @@ class LocalKeystore(BaseKeystore):
         # Sign deposit message
         domain = compute_deposit_domain(settings.network_config.GENESIS_FORK_VERSION)
         signing_root = compute_signing_root(deposit_message, domain)
-        return bls.Sign(private_key_share, signing_root)
+        return BLSSignature(bls.Sign(private_key_share, signing_root))

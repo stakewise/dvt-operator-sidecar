@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 from typing import cast
 
@@ -7,6 +8,7 @@ from sw_utils.common import urljoin
 
 from src.common.setup_logging import ExtendedLogger
 from src.config import settings
+from src.validators.typings import PushSignaturesRequestItem
 
 logger = cast(ExtendedLogger, logging.getLogger(__name__))
 
@@ -32,18 +34,10 @@ async def get_validators(session: ClientSession) -> list[dict]:
 
 async def push_signatures(
     session: ClientSession,
-    public_key_to_signatures: dict[HexStr, tuple[HexStr, HexStr]],
+    public_key_to_signatures: dict[HexStr, PushSignaturesRequestItem],
     share_index: int,
 ) -> None:
-    shares = []
-    for public_key, (exit_signature, deposit_signature) in public_key_to_signatures.items():
-        shares.append(
-            {
-                'public_key': public_key,
-                'exit_signature': exit_signature,
-                'deposit_signature': deposit_signature,
-            }
-        )
+    shares = [dataclasses.asdict(item) for item in public_key_to_signatures.values()]
     jsn = {'share_index': share_index, 'shares': shares}
     logger.info('push signatures for share_index %s', share_index)
     url = urljoin(settings.relayer_endpoint, '/signatures')
